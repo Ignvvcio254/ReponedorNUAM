@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useCallback } from 'react'
 import { Button } from '@/components/ui/Button'
@@ -26,20 +26,19 @@ export function BulkImport({ onSuccess }: { onSuccess?: () => void }) {
     setResult(null)
     
     if (selectedFile.type === 'text/csv' || selectedFile.name.endsWith('.csv')) {
-      // Leer CSV para preview
       const reader = new FileReader()
       reader.onload = (e) => {
         const csv = e.target?.result as string
         const lines = csv.split('\n')
         const headers = lines[0].split(',').map(h => h.trim())
-        const rows = lines.slice(1, 6).map(line => { // Solo 5 filas para preview
+        const rows = lines.slice(1, 6).map(line => {
           const values = line.split(',').map(v => v.trim())
           const row: any = {}
           headers.forEach((header, index) => {
             row[header] = values[index] || ''
           })
           return row
-        }).filter(row => Object.values(row).some(v => v)) // Filtrar filas vacías
+        }).filter(row => Object.values(row).some(v => v))
         
         setPreview(rows)
       }
@@ -69,21 +68,21 @@ export function BulkImport({ onSuccess }: { onSuccess?: () => void }) {
 
   const processImport = async () => {
     if (!file) return
-
+    
     setImporting(true)
     const formData = new FormData()
     formData.append('file', file)
-
+    
     try {
       const response = await fetch('/api/import', {
         method: 'POST',
         body: formData
       })
-
-      const result = await response.json()
       
-      if (result.success) {
-        setResult(result.data)
+      const result = await response.json()
+      setResult(result)
+      
+      if (result.success > 0) {
         if (onSuccess) onSuccess()
       } else {
         alert('Error en la importación: ' + result.error)
@@ -114,7 +113,6 @@ export function BulkImport({ onSuccess }: { onSuccess?: () => void }) {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* Instrucciones */}
       <Card>
         <CardHeader>
           <CardTitle>Importación Masiva de Calificaciones</CardTitle>
@@ -127,28 +125,27 @@ export function BulkImport({ onSuccess }: { onSuccess?: () => void }) {
             <div className="bg-gray-50 p-4 rounded-lg">
               <ul className="text-sm space-y-1">
                 <li><strong>emisorName:</strong> Nombre de la empresa</li>
-                <li><strong>taxId:</strong> RUT o ID tributario</li>
-                <li><strong>period:</strong> Período en formato YYYY-MM</li>
-                <li><strong>amount:</strong> Monto en moneda local</li>
-                <li><strong>country:</strong> Código de país (CL, PE, CO)</li>
+                <li><strong>taxId:</strong> RUT o identificación tributaria</li>
+                <li><strong>period:</strong> Período (YYYY-MM)</li>
+                <li><strong>amount:</strong> Monto</li>
+                <li><strong>country:</strong> País (CL, PE, CO)</li>
               </ul>
             </div>
-            <Button variant="secondary" onClick={downloadTemplate}>
+            <Button onClick={downloadTemplate} variant="secondary">
               Descargar Plantilla CSV
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Zona de Drop */}
       <Card>
         <CardContent className="p-6">
           <div
-            className={order-2 border-dashed rounded-lg p-8 text-center transition-colors $\{
+            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
               dragActive 
                 ? 'border-nuam-500 bg-nuam-50' 
                 : 'border-gray-300 hover:border-gray-400'
-            }}
+            }`}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -158,47 +155,43 @@ export function BulkImport({ onSuccess }: { onSuccess?: () => void }) {
                 <div className="text-green-600 font-medium">
                   ✓ Archivo seleccionado: {file.name}
                 </div>
-                <div className="text-sm text-gray-600">
-                  Tamaño: {(file.size / 1024).toFixed(1)} KB
-                </div>
+                <Button onClick={processImport} disabled={importing}>
+                  {importing ? 'Procesando...' : 'Importar Datos'}
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  onClick={() => {
+                    setFile(null)
+                    setPreview([])
+                  }}
+                >
+                  Cambiar Archivo
+                </Button>
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="text-gray-400">
-                  <svg className="mx-auto h-12 w-12" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                <div className="text-gray-600">
+                  <div className="text-4xl mb-4">📄</div>
+                  <p>Arrastra tu archivo CSV aquí o</p>
                 </div>
-                <div>
-                  <p className="text-lg font-medium text-gray-900">
-                    Arrastra tu archivo CSV aquí
-                  </p>
-                  <p className="text-gray-600">o</p>
-                  <label className="cursor-pointer">
-                    <span className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                      Seleccionar archivo
-                    </span>
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept=".csv,.xlsx,.xls"
-                      onChange={(e) => {
-                        const selectedFile = e.target.files?.[0]
-                        if (selectedFile) handleFileSelect(selectedFile)
-                      }}
-                    />
-                  </label>
-                </div>
-                <p className="text-xs text-gray-500">
-                  CSV, Excel (máx. 10MB)
-                </p>
+                <Button variant="secondary" onClick={() => {
+                  const input = document.createElement('input')
+                  input.type = 'file'
+                  input.accept = '.csv'
+                  input.onchange = (e) => {
+                    const selectedFile = (e.target as HTMLInputElement).files?.[0]
+                    if (selectedFile) handleFileSelect(selectedFile)
+                  }
+                  input.click()
+                }}>
+                  Seleccionar Archivo
+                </Button>
               </div>
             )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Preview de datos */}
       {preview.length > 0 && (
         <Card>
           <CardHeader>
@@ -206,21 +199,21 @@ export function BulkImport({ onSuccess }: { onSuccess?: () => void }) {
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    {Object.keys(preview[0]).map(header => (
-                      <th key={header} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              <table className="w-full border-collapse border border-gray-300">
+                <thead>
+                  <tr className="bg-gray-50">
+                    {Object.keys(preview[0] || {}).map((header) => (
+                      <th key={header} className="border border-gray-300 p-2 text-left">
                         {header}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody>
                   {preview.map((row, index) => (
                     <tr key={index}>
                       {Object.values(row).map((value: any, cellIndex) => (
-                        <td key={cellIndex} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td key={cellIndex} className="border border-gray-300 p-2">
                           {value}
                         </td>
                       ))}
@@ -229,54 +222,32 @@ export function BulkImport({ onSuccess }: { onSuccess?: () => void }) {
                 </tbody>
               </table>
             </div>
-            
-            <div className="mt-4 flex gap-2">
-              <Button 
-                onClick={processImport} 
-                disabled={importing}
-                className="flex-1"
-              >
-                {importing ? 'Procesando...' : 'Importar Datos'}
-              </Button>
-              <Button 
-                variant="secondary"
-                onClick={() => {
-                  setFile(null)
-                  setPreview([])
-                }}
-              >
-                Cancelar
-              </Button>
-            </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Resultados de importación */}
       {result && (
         <Card>
           <CardHeader>
-            <CardTitle>Resultados de Importación</CardTitle>
+            <CardTitle>Resultado de la Importación</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">{result.success}</div>
-                  <div className="text-sm text-green-700">Registros exitosos</div>
+              <div className="flex space-x-4">
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="text-green-600 font-semibold">Exitosos: {result.success}</div>
                 </div>
-                <div className="text-center p-4 bg-red-50 rounded-lg">
-                  <div className="text-2xl font-bold text-red-600">{result.errors}</div>
-                  <div className="text-sm text-red-700">Errores</div>
+                <div className="bg-red-50 p-4 rounded-lg">
+                  <div className="text-red-600 font-semibold">Errores: {result.errors}</div>
                 </div>
               </div>
-
-              {result.errorDetails.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Errores encontrados:</h4>
-                  <div className="max-h-40 overflow-y-auto space-y-2">
+              
+              {result.errorDetails && result.errorDetails.length > 0 && (
+                <div className="bg-red-50 p-4 rounded-lg">
+                  <div className="text-red-600 font-medium mb-2">Detalles de errores:</div>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
                     {result.errorDetails.map((error, index) => (
-                      <div key={index} className="text-sm bg-red-50 p-2 rounded border">
+                      <div key={index} className="text-sm">
                         <strong>Fila {error.row}:</strong> {error.error}
                       </div>
                     ))}

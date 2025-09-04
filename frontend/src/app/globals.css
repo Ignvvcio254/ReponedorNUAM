@@ -1,4 +1,4 @@
-﻿@tailwind base;
+@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -60,7 +60,11 @@
 
 /* Estilos personalizados para NUAM */
 .nuam-gradient {
-  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  background: linear-gradient(135deg, #FF4500 0%, #E03E00 100%);
+}
+
+.nuam-gradient-soft {
+  background: linear-gradient(135deg, #fff5f0 0%, #ffe6d9 100%);
 }
 
 .nuam-card {

@@ -1,7 +1,8 @@
-﻿import { clsx, type ClassValue } from 'clsx'
+import { clsx, type ClassValue } from 'clsx'
+import { twMerge } from 'tailwind-merge'
 
 export function cn(...inputs: ClassValue[]) {
-  return clsx(inputs)
+  return twMerge(clsx(inputs))
 }
 
 export function formatCurrency(amount: number, country: 'CL' | 'PE' | 'CO' = 'CL') {
@@ -40,7 +41,7 @@ export function formatPeriod(period: string) {
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
   ]
   
-  return ${monthNames[parseInt(month) - 1]} 
+  return `${monthNames[parseInt(month) - 1]} ${year}`
 }
 
 export function getCountryFlag(country: 'CL' | 'PE' | 'CO') {

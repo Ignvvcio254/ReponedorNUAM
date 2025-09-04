@@ -8,7 +8,7 @@ export class ApiError extends Error {
 }
 
 async function fetchApi(endpoint: string, options: RequestInit = {}) {
-  const url = ${API_BASE_URL}
+  const url = `${API_BASE_URL}${endpoint}`
   
   const response = await fetch(url, {
     headers: {
@@ -33,11 +33,11 @@ export const api = {
       if (filters?.country) params.append('country', filters.country)
       if (filters?.status) params.append('status', filters.status)
       
-      return fetchApi(/qualifications?)
+      return fetchApi(`/qualifications?${params.toString()}`)
     },
     
     getById: (id: string) => {
-      return fetchApi(/qualifications/)
+      return fetchApi(`/qualifications/${id}`)
     },
     
     create: (data: any) => {
@@ -48,14 +48,14 @@ export const api = {
     },
     
     update: (id: string, data: any) => {
-      return fetchApi(/qualifications/, {
+      return fetchApi(`/qualifications/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
       })
     },
     
     delete: (id: string) => {
-      return fetchApi(/qualifications/, {
+      return fetchApi(`/qualifications/${id}`, {
         method: 'DELETE',
       })
     }

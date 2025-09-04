@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           success: false, 
-          error: Faltan columnas requeridas:  
+          error: `Faltan columnas requeridas: ${missingHeaders.join(', ')}`
         },
         { status: 400 }
       )
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
 
         // Crear calificación
         const qualification = {
-          emisorId: 	emp--,
+          emisorId: `temp-${Date.now()}-${i}`,
           emisorName: rowData.emisorName,
           period: rowData.period,
           amount: parseFloat(rowData.amount),

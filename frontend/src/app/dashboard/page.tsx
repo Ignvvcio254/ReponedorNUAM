@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
@@ -67,105 +67,157 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="nuam-gradient shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-white">Dashboard NUAM</h1>
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
+        {/* Page Header */}
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 truncate">
+                Dashboard
+              </h1>
+              <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600">
+                Vista general del sistema de calificaciones tributarias NUAM
+              </p>
             </div>
-            <nav className="flex space-x-4">
-              <Button variant="secondary" size="sm">
-                Nueva Calificación
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+              <Button 
+                variant="secondary" 
+                size="sm"
+                className="w-full sm:w-auto text-xs sm:text-sm"
+              >
+                <span className="sm:hidden">➕</span>
+                <span className="hidden sm:inline">Nueva Calificación</span>
               </Button>
-              <Button variant="secondary" size="sm">
-                Carga Masiva
+              <Button 
+                size="sm"
+                className="w-full sm:w-auto text-xs sm:text-sm"
+              >
+                <span className="sm:hidden">📤</span>
+                <span className="hidden sm:inline">Carga Masiva</span>
               </Button>
-            </nav>
+            </div>
           </div>
         </div>
-      </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div>
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <Card className="hover:shadow-md transition-shadow duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">
+              <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 truncate">
                 Total Calificaciones
               </CardTitle>
+              <div className="text-lg sm:text-xl">📊</div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900">
+              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
                 {stats.totalQualifications}
               </div>
+              <p className="text-xs text-gray-500 mt-1">Todas las calificaciones</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hover:shadow-md transition-shadow duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">
+              <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 truncate">
                 Pendientes
               </CardTitle>
+              <div className="text-lg sm:text-xl">⏳</div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">
+              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-yellow-600">
                 {stats.pendingApprovals}
               </div>
+              <p className="text-xs text-gray-500 mt-1">Esperando aprobación</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hover:shadow-md transition-shadow duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">
+              <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 truncate">
                 Aprobadas este mes
               </CardTitle>
+              <div className="text-lg sm:text-xl">✅</div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">
+              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600">
                 {stats.approvedThisMonth}
               </div>
+              <p className="text-xs text-gray-500 mt-1">En los últimos 30 días</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hover:shadow-md transition-shadow duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">
+              <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 truncate">
                 Monto Promedio
               </CardTitle>
+              <div className="text-lg sm:text-xl">💰</div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-nuam-600">
+              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-nuam-600">
                 {formatCurrency(stats.averageAmount)}
               </div>
+              <p className="text-xs text-gray-500 mt-1">Por calificación</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Recent Qualifications */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Calificaciones Recientes</CardTitle>
+        <Card className="overflow-hidden">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+              <span>📋</span>
+              Calificaciones Recientes
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
+          <CardContent className="p-0">
+            {/* Mobile View */}
+            <div className="block sm:hidden">
+              <div className="divide-y divide-gray-200">
+                {qualifications.slice(0, 5).map((qualification: any) => (
+                  <div key={qualification.id} className="p-4 hover:bg-gray-50">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="font-medium text-gray-900 truncate">
+                        {qualification.emisorName}
+                      </div>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(qualification.status)}`}>
+                        {qualification.status}
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-500 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span>{getCountryFlag(qualification.country)}</span>
+                        <span>{qualification.period}</span>
+                      </div>
+                      <div className="font-medium text-gray-900">
+                        {formatCurrency(qualification.amount, qualification.country)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Desktop/Tablet View */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Emisor
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       País
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="hidden md:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Período
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Monto
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Estado
                     </th>
                   </tr>
@@ -173,24 +225,35 @@ export default function Dashboard() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {qualifications.slice(0, 5).map((qualification: any) => (
                     <tr key={qualification.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {qualification.emisorName}
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-900">
+                        <div className="truncate max-w-32 sm:max-w-none" title={qualification.emisorName}>
+                          {qualification.emisorName}
+                        </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <span className="flex items-center">
-                          {getCountryFlag(qualification.country)}
-                          <span className="ml-2">{COUNTRIES[qualification.country as keyof typeof COUNTRIES].name}</span>
-                        </span>
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-900">
+                        <div className="flex items-center">
+                          <span className="text-base sm:text-lg">{getCountryFlag(qualification.country)}</span>
+                          <span className="ml-1 sm:ml-2 hidden lg:inline">
+                            {COUNTRIES[qualification.country as keyof typeof COUNTRIES].name}
+                          </span>
+                        </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="hidden md:table-cell px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-900">
                         {qualification.period}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {formatCurrency(qualification.amount, qualification.country)}
+                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-900">
+                        <div className="truncate">
+                          {formatCurrency(qualification.amount, qualification.country)}
+                        </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={inline-flex px-2 py-1 text-xs font-semibold rounded-full }>
-                          {qualification.status}
+                      <td className="px-3 sm:px-6 py-3 sm:py-4">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(qualification.status)}`}>
+                          <span className="sm:hidden">
+                            {qualification.status === 'APPROVED' ? '✅' : 
+                             qualification.status === 'PENDING' ? '⏳' : 
+                             qualification.status === 'REJECTED' ? '❌' : '📝'}
+                          </span>
+                          <span className="hidden sm:inline">{qualification.status}</span>
                         </span>
                       </td>
                     </tr>
@@ -200,7 +263,7 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
-      </main>
+      </div>
     </div>
   )
 }

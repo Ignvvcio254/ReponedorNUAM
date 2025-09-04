@@ -1,4 +1,5 @@
-﻿import { Card, CardContent } from '@/components/ui/Card'
+import { Card, CardContent } from '@/components/ui/Card'
+import { cn } from '@/lib/utils'
 
 interface StatsCardProps {
   title: string
@@ -35,7 +36,7 @@ export function StatsCard({ title, value, description, icon, trend }: StatsCardP
           {trend && (
             <div className="flex items-center pt-1">
               <span
-                className={clsx(
+                className={cn(
                   'text-xs font-medium',
                   trend.isPositive ? 'text-green-600' : 'text-red-600'
                 )}
