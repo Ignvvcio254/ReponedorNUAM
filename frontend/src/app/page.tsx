@@ -1,4 +1,6 @@
-﻿export default function Home() {
+﻿'use client'
+
+export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Header */}
@@ -14,14 +16,14 @@
               </span>
             </div>
             <nav className="hidden md:flex space-x-8">
-              <a href="#" className="text-white/90 hover:text-white transition-colors">
+              <a href="/dashboard" className="text-white/90 hover:text-white transition-colors">
                 Dashboard
               </a>
-              <a href="#" className="text-white/90 hover:text-white transition-colors">
+              <a href="/qualifications" className="text-white/90 hover:text-white transition-colors">
                 Calificaciones
               </a>
-              <a href="#" className="text-white/90 hover:text-white transition-colors">
-                Reportes
+              <a href="/import" className="text-white/90 hover:text-white transition-colors">
+                Importación
               </a>
             </nav>
           </div>
@@ -59,7 +61,7 @@
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="nuam-card hover:shadow-md transition-shadow cursor-pointer">
+          <a href="/qualifications" className="nuam-card hover:shadow-md transition-shadow cursor-pointer">
             <div className="text-center">
               <div className="w-12 h-12 bg-nuam-100 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <svg className="w-6 h-6 text-nuam-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -69,9 +71,9 @@
               <h3 className="font-semibold text-gray-900 mb-2">Nueva Calificación</h3>
               <p className="text-sm text-gray-600">Agregar manualmente una nueva calificación tributaria</p>
             </div>
-          </div>
+          </a>
 
-          <div className="nuam-card hover:shadow-md transition-shadow cursor-pointer">
+          <a href="/import" className="nuam-card hover:shadow-md transition-shadow cursor-pointer">
             <div className="text-center">
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -81,7 +83,7 @@
               <h3 className="font-semibold text-gray-900 mb-2">Carga Masiva</h3>
               <p className="text-sm text-gray-600">Importar múltiples calificaciones desde CSV o Excel</p>
             </div>
-          </div>
+          </a>
 
           <div className="nuam-card hover:shadow-md transition-shadow cursor-pointer">
             <div className="text-center">
@@ -95,17 +97,17 @@
             </div>
           </div>
 
-          <div className="nuam-card hover:shadow-md transition-shadow cursor-pointer">
+          <a href="/dashboard" className="nuam-card hover:shadow-md transition-shadow cursor-pointer">
             <div className="text-center">
               <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
               </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Ver Reportes</h3>
-              <p className="text-sm text-gray-600">Analizar métricas y generar reportes detallados</p>
+              <h3 className="font-semibold text-gray-900 mb-2">Ver Dashboard</h3>
+              <p className="text-sm text-gray-600">Analizar métricas y ver resumen general</p>
             </div>
-          </div>
+          </a>
         </div>
       </main>
     </div>
