@@ -67,108 +67,107 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
+      <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-6 sm:py-8 lg:py-12">
         {/* Page Header */}
         <div className="mb-6 sm:mb-8">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div className="min-w-0 flex-1">
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 truncate">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-gray-900 truncate">
                 Dashboard
               </h1>
-              <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600">
+              <p className="mt-2 sm:mt-3 text-base sm:text-lg lg:text-xl text-gray-600">
                 Vista general del sistema de calificaciones tributarias NUAM
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
               <Button 
                 variant="secondary" 
-                size="sm"
-                className="w-full sm:w-auto text-xs sm:text-sm"
+                size="lg"
+                className="w-full sm:w-auto text-sm sm:text-base lg:text-lg px-6 py-3"
               >
-                <span className="sm:hidden">➕</span>
-                <span className="hidden sm:inline">Nueva Calificación</span>
+                <span className="mr-2">➕</span>
+                Nueva Calificación
               </Button>
               <Button 
-                size="sm"
-                className="w-full sm:w-auto text-xs sm:text-sm"
+                size="lg"
+                className="w-full sm:w-auto text-sm sm:text-base lg:text-lg px-6 py-3"
               >
-                <span className="sm:hidden">📤</span>
-                <span className="hidden sm:inline">Carga Masiva</span>
+                <span className="mr-2">📤</span>
+                Carga Masiva
               </Button>
             </div>
           </div>
         </div>
 
-      {/* Main Content */}
-      <div>
+        {/* Main Content */}
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          <Card className="hover:shadow-md transition-shadow duration-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 truncate">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 mb-8 sm:mb-12">
+          <Card className="hover:shadow-lg transition-shadow duration-300 p-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm sm:text-base lg:text-lg font-medium text-gray-600">
                 Total Calificaciones
               </CardTitle>
-              <div className="text-lg sm:text-xl">📊</div>
+              <div className="text-2xl sm:text-3xl lg:text-4xl">📊</div>
             </CardHeader>
             <CardContent>
-              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
+              <div className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-900">
                 {stats.totalQualifications}
               </div>
-              <p className="text-xs text-gray-500 mt-1">Todas las calificaciones</p>
+              <p className="text-sm sm:text-base text-gray-500 mt-2">Todas las calificaciones</p>
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-md transition-shadow duration-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 truncate">
+          <Card className="hover:shadow-lg transition-shadow duration-300 p-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm sm:text-base lg:text-lg font-medium text-gray-600">
                 Pendientes
               </CardTitle>
-              <div className="text-lg sm:text-xl">⏳</div>
+              <div className="text-2xl sm:text-3xl lg:text-4xl">⏳</div>
             </CardHeader>
             <CardContent>
-              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-yellow-600">
+              <div className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-yellow-600">
                 {stats.pendingApprovals}
               </div>
-              <p className="text-xs text-gray-500 mt-1">Esperando aprobación</p>
+              <p className="text-sm sm:text-base text-gray-500 mt-2">Esperando aprobación</p>
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-md transition-shadow duration-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 truncate">
+          <Card className="hover:shadow-lg transition-shadow duration-300 p-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm sm:text-base lg:text-lg font-medium text-gray-600">
                 Aprobadas este mes
               </CardTitle>
-              <div className="text-lg sm:text-xl">✅</div>
+              <div className="text-2xl sm:text-3xl lg:text-4xl">✅</div>
             </CardHeader>
             <CardContent>
-              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-600">
+              <div className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-green-600">
                 {stats.approvedThisMonth}
               </div>
-              <p className="text-xs text-gray-500 mt-1">En los últimos 30 días</p>
+              <p className="text-sm sm:text-base text-gray-500 mt-2">En los últimos 30 días</p>
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-md transition-shadow duration-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 truncate">
+          <Card className="hover:shadow-lg transition-shadow duration-300 p-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm sm:text-base lg:text-lg font-medium text-gray-600">
                 Monto Promedio
               </CardTitle>
-              <div className="text-lg sm:text-xl">💰</div>
+              <div className="text-2xl sm:text-3xl lg:text-4xl">💰</div>
             </CardHeader>
             <CardContent>
-              <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-nuam-600">
+              <div className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-nuam-600">
                 {formatCurrency(stats.averageAmount)}
               </div>
-              <p className="text-xs text-gray-500 mt-1">Por calificación</p>
+              <p className="text-sm sm:text-base text-gray-500 mt-2">Por calificación</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Recent Qualifications */}
         <Card className="overflow-hidden">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
-              <span>📋</span>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl sm:text-2xl lg:text-3xl flex items-center gap-3">
+              <span className="text-2xl sm:text-3xl">📋</span>
               Calificaciones Recientes
             </CardTitle>
           </CardHeader>
@@ -205,19 +204,19 @@ export default function Dashboard() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 sm:px-6 lg:px-8 py-4 text-left text-sm sm:text-base font-semibold text-gray-700 uppercase tracking-wider">
                       Emisor
                     </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 sm:px-6 lg:px-8 py-4 text-left text-sm sm:text-base font-semibold text-gray-700 uppercase tracking-wider">
                       País
                     </th>
-                    <th className="hidden md:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="hidden md:table-cell px-4 sm:px-6 lg:px-8 py-4 text-left text-sm sm:text-base font-semibold text-gray-700 uppercase tracking-wider">
                       Período
                     </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 sm:px-6 lg:px-8 py-4 text-left text-sm sm:text-base font-semibold text-gray-700 uppercase tracking-wider">
                       Monto
                     </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 sm:px-6 lg:px-8 py-4 text-left text-sm sm:text-base font-semibold text-gray-700 uppercase tracking-wider">
                       Estado
                     </th>
                   </tr>
@@ -225,30 +224,30 @@ export default function Dashboard() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {qualifications.slice(0, 5).map((qualification: any) => (
                     <tr key={qualification.id} className="hover:bg-gray-50">
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-900">
+                      <td className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5 text-sm sm:text-base text-gray-900">
                         <div className="truncate max-w-32 sm:max-w-none" title={qualification.emisorName}>
                           {qualification.emisorName}
                         </div>
                       </td>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-900">
+                      <td className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5 text-sm sm:text-base text-gray-900">
                         <div className="flex items-center">
-                          <span className="text-base sm:text-lg">{getCountryFlag(qualification.country)}</span>
-                          <span className="ml-1 sm:ml-2 hidden lg:inline">
+                          <span className="text-lg sm:text-xl lg:text-2xl">{getCountryFlag(qualification.country)}</span>
+                          <span className="ml-2 sm:ml-3 hidden lg:inline">
                             {COUNTRIES[qualification.country as keyof typeof COUNTRIES].name}
                           </span>
                         </div>
                       </td>
-                      <td className="hidden md:table-cell px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-900">
+                      <td className="hidden md:table-cell px-4 sm:px-6 lg:px-8 py-4 sm:py-5 text-sm sm:text-base text-gray-900">
                         {qualification.period}
                       </td>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-900">
-                        <div className="truncate">
+                      <td className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5 text-sm sm:text-base text-gray-900">
+                        <div className="truncate font-semibold">
                           {formatCurrency(qualification.amount, qualification.country)}
                         </div>
                       </td>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(qualification.status)}`}>
-                          <span className="sm:hidden">
+                      <td className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
+                        <span className={`inline-flex px-3 py-2 text-sm font-semibold rounded-full ${getStatusColor(qualification.status)}`}>
+                          <span className="sm:hidden text-base">
                             {qualification.status === 'APPROVED' ? '✅' : 
                              qualification.status === 'PENDING' ? '⏳' : 
                              qualification.status === 'REJECTED' ? '❌' : '📝'}

@@ -1,33 +1,40 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Logo } from '@/components/ui/Logo'
 
 export default function Home() {
-  useEffect(() => {
-    // Redirigir al dashboard después de mostrar la página de bienvenida
-    const timer = setTimeout(() => {
-      window.location.href = '/dashboard'
-    }, 2000)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSliding, setIsSliding] = useState(false)
 
-    return () => clearTimeout(timer)
+  useEffect(() => {
+    // Simular carga y luego iniciar animación de salida
+    const loadingTimer = setTimeout(() => {
+      setIsLoading(false)
+      setIsSliding(true)
+      
+      // Después de la animación, redirigir
+      setTimeout(() => {
+        window.location.href = '/dashboard'
+      }, 600) // Tiempo para que complete la animación
+    }, 1800) // Reducido un poco el tiempo de carga
+
+    return () => clearTimeout(loadingTimer)
   }, [])
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <div className="mb-8 flex justify-center">
-          <Logo size="xl" showText={false} />
-        </div>
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          Bienvenido a NUAM
-        </h1>
-        <p className="text-xl text-gray-600 mb-8">
-          Sistema de Calificaciones Tributarias
-        </p>
-        <div className="flex items-center justify-center space-x-2">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-nuam-500"></div>
-          <span className="text-gray-600">Cargando dashboard...</span>
+    <div className={`min-h-screen flex items-center justify-center bg-white transition-all duration-600 ease-in-out ${
+      isSliding ? 'transform -translate-y-full opacity-0' : 'transform translate-y-0 opacity-100'
+    }`}>
+      <div className={`transition-all duration-500 ease-in-out ${
+        isLoading ? 'transform scale-100 opacity-100' : 'transform scale-105 opacity-95'
+      }`}>
+        <div className="flex justify-center">
+          <div className={`transition-all duration-500 ease-in-out ${
+            isLoading ? 'transform scale-100' : 'transform scale-105'
+          }`}>
+            <Logo size="3xl" showText={false} />
+          </div>
         </div>
       </div>
     </div>
