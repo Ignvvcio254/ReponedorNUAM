@@ -104,17 +104,28 @@ export async function GET(request: NextRequest) {
 
     // Estadísticas por mes (últimos 6 meses)
     const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1)
-    const monthlyQualifications = await db.$queryRaw`
-      SELECT 
-        DATE_TRUNC('month', "createdAt") as month,
-        COUNT(*)::integer as count,
-        SUM("amount")::float as total_amount
-      FROM "qualifications" 
-      WHERE "createdAt" >= ${sixMonthsAgo} AND "createdAt" <= ${endDate}
-      ${country ? db.$queryRaw`AND "country" = ${country}` : db.$queryRaw``}
-      GROUP BY DATE_TRUNC('month', "createdAt")
-      ORDER BY month ASC
-    `
+    const monthlyQualifications = country 
+      ? await db.$queryRaw`
+          SELECT 
+            DATE_TRUNC('month', "createdAt") as month,
+            COUNT(*)::integer as count,
+            SUM("amount")::float as total_amount
+          FROM "qualifications" 
+          WHERE "createdAt" >= ${sixMonthsAgo} AND "createdAt" <= ${endDate}
+            AND "country" = ${country}
+          GROUP BY DATE_TRUNC('month', "createdAt")
+          ORDER BY month ASC
+        `
+      : await db.$queryRaw`
+          SELECT 
+            DATE_TRUNC('month', "createdAt") as month,
+            COUNT(*)::integer as count,
+            SUM("amount")::float as total_amount
+          FROM "qualifications" 
+          WHERE "createdAt" >= ${sixMonthsAgo} AND "createdAt" <= ${endDate}
+          GROUP BY DATE_TRUNC('month', "createdAt")
+          ORDER BY month ASC
+        `
 
     // Top emisores por calificaciones
     const topEmisors = await db.qualification.groupBy({
