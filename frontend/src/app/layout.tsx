@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   title: 'NUAM - Sistema de Contenedor Tributario',
   description: 'Sistema completo para gestión de calificaciones tributarias, entidades fiscales e importaciones masivas para 15 países de América Latina',
 }
+// Force deployment refresh
 
 export default function RootLayout({
   children,
