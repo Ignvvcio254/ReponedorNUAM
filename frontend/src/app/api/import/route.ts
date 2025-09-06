@@ -1,6 +1,6 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { Country, ImportStatus } from '@prisma/client'
+import { Country, ImportStatus } from '../../../generated/prisma'
 
 export async function POST(request: NextRequest) {
   try {

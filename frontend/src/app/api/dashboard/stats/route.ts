@@ -180,14 +180,14 @@ export async function GET(request: NextRequest) {
             active: activeAudits
           }
         },
-        byCountry: qualificationsByCountry.map(item => ({
+        byCountry: qualificationsByCountry.map((item: any) => ({
           country: item.country,
           count: item._count,
           totalAmount: item._sum.amount || 0,
           totalCalculatedValue: item._sum.calculatedValue || 0
         })),
         monthlyTrends: monthlyQualifications,
-        topEmisors: topEmisors.map(item => ({
+        topEmisors: topEmisors.map((item: any) => ({
           name: item.emisorName,
           count: item._count,
           totalAmount: item._sum.amount || 0

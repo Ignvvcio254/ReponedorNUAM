@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/Card'
 import { COUNTRIES } from '@/lib/constants'
+import ChartsSection from '@/components/dashboard/ChartsSection'
+import QuickActionsPanel from '@/components/dashboard/QuickActionsPanel'
+import AdvancedMetrics from '@/components/dashboard/AdvancedMetrics'
 
 interface DashboardStats {
   overview: {
@@ -163,6 +166,9 @@ export default function TaxContainerDashboard({ userId }: TaxContainerDashboardP
           </select>
         </div>
       </div>
+
+      {/* Quick Actions Panel */}
+      <QuickActionsPanel />
 
       {/* Métricas principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -353,6 +359,12 @@ export default function TaxContainerDashboard({ userId }: TaxContainerDashboardP
           </div>
         </div>
       </Card>
+
+      {/* Advanced Metrics */}
+      <AdvancedMetrics stats={stats} />
+
+      {/* Charts Section */}
+      <ChartsSection stats={stats} />
     </div>
   )
 }
