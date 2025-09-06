@@ -1,16 +1,35 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { TAX_FACTORS } from '@/lib/constants'
+import { Country, ImportStatus } from '@prisma/client'
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File
+    const userId = formData.get('userId') as string
     
     if (!file) {
       return NextResponse.json(
         { success: false, error: 'No se proporcionó archivo' },
         { status: 400 }
+      )
+    }
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'ID de usuario es requerido' },
+        { status: 400 }
+      )
+    }
+
+    // Verificar que el usuario existe
+    const user = await db.users.findUnique({
+      where: { id: userId }
+    })
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Usuario no encontrado' },
+        { status: 404 }
       )
     }
 
@@ -24,6 +43,19 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // Crear registro de importación
+    const importBatch = await db.importBatches.create({
+      data: {
+        fileName: file.name,
+        totalRecords: lines.length - 1, // -1 para excluir headers
+        processedRecords: 0,
+        successfulRecords: 0,
+        failedRecords: 0,
+        status: 'PROCESSING',
+        userId: userId
+      }
+    })
 
     // Parsear CSV
     const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''))
@@ -40,10 +72,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Validar headers requeridos
-    const requiredHeaders = ['emisorName', 'taxId', 'period', 'amount', 'country']
+    const requiredHeaders = ['emisorName', 'period', 'amount', 'country']
     const missingHeaders = requiredHeaders.filter(h => !headers.includes(h))
     
     if (missingHeaders.length > 0) {
+      await db.importBatches.update({
+        where: { id: importBatch.id },
+        data: {
+          status: 'FAILED',
+          errors: { message: `Faltan columnas requeridas: ${missingHeaders.join(', ')}` }
+        }
+      })
+      
       return NextResponse.json(
         { 
           success: false, 
@@ -51,6 +91,25 @@ export async function POST(request: NextRequest) {
         },
         { status: 400 }
       )
+    }
+
+    // Factores de conversión por país
+    const exchangeRates: Record<string, number> = {
+      CL: 64649,  // UTM Chile
+      PE: 5150,   // UIT Perú
+      CO: 42412,  // UVT Colombia
+      MX: 108.57, // UMA México
+      AR: 25000,  // UF Argentina
+      BR: 7239,   // UFIR Brasil
+      UY: 5650,   // UI Uruguay
+      PY: 4200,   // JSM Paraguay
+      BO: 23600,  // UFV Bolivia
+      EC: 760,    // SBU Ecuador
+      VE: 0.5,    // PT Venezuela
+      PA: 0.05,   // TB Panamá
+      CR: 946,    // SB Costa Rica
+      GT: 300,    // SM Guatemala
+      US: 1       // Base USD
     }
 
     // Procesar cada fila
@@ -73,10 +132,6 @@ export async function POST(request: NextRequest) {
           throw new Error('Nombre del emisor es requerido')
         }
         
-        if (!rowData.taxId) {
-          throw new Error('RUT/ID tributario es requerido')
-        }
-        
         if (!rowData.period || !/^\d{4}-\d{2}$/.test(rowData.period)) {
           throw new Error('Período debe estar en formato YYYY-MM')
         }
@@ -85,27 +140,32 @@ export async function POST(request: NextRequest) {
           throw new Error('Monto debe ser un número válido')
         }
         
-        if (!rowData.country || !['CL', 'PE', 'CO'].includes(rowData.country)) {
-          throw new Error('País debe ser CL, PE o CO')
+        if (!rowData.country || !Object.keys(exchangeRates).includes(rowData.country)) {
+          throw new Error(`País debe ser uno de: ${Object.keys(exchangeRates).join(', ')}`)
         }
 
         // Obtener factor tributario
-        const factor = TAX_FACTORS[rowData.country as keyof typeof TAX_FACTORS]
-        const factorValue = Object.values(factor)[0] as number
+        const factor = exchangeRates[rowData.country] || 1
+        const amount = parseFloat(rowData.amount)
+        const calculatedValue = amount / factor
 
         // Crear calificación
-        const qualification = {
-          emisorId: `temp-${Date.now()}-${i}`,
-          emisorName: rowData.emisorName,
-          period: rowData.period,
-          amount: parseFloat(rowData.amount),
-          factorApplied: factorValue,
-          calculatedValue: parseFloat(rowData.amount) / factorValue,
-          status: 'DRAFT' as const,
-          country: rowData.country
-        }
-
-        await db.qualifications.create(qualification)
+        await db.qualifications.create({
+          data: {
+            emisorName: rowData.emisorName,
+            taxId: rowData.taxId || null,
+            country: rowData.country as Country,
+            period: rowData.period,
+            amount: amount,
+            currency: rowData.currency || 'USD',
+            calculatedValue: calculatedValue,
+            status: 'DRAFT',
+            observations: rowData.observations || null,
+            documentUrl: rowData.documentUrl || null,
+            userId: userId
+          }
+        })
+        
         results.success++
 
       } catch (error) {
@@ -118,9 +178,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Actualizar el registro de importación
+    await db.importBatches.update({
+      where: { id: importBatch.id },
+      data: {
+        processedRecords: results.success + results.errors,
+        successfulRecords: results.success,
+        failedRecords: results.errors,
+        status: results.errors > 0 && results.success === 0 ? 'FAILED' : 'COMPLETED',
+        errors: results.errorDetails.length > 0 ? { errors: results.errorDetails } : null
+      }
+    })
+
     return NextResponse.json({
       success: true,
-      data: results
+      data: {
+        importBatchId: importBatch.id,
+        ...results
+      }
     })
 
   } catch (error) {

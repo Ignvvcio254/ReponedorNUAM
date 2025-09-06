@@ -6,8 +6,8 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'NUAM - Mantenedor de Calificaciones Tributarias',
-  description: 'Sistema para gestión de calificaciones tributarias de las bolsas de Santiago, Lima y Colombia',
+  title: 'NUAM - Sistema de Contenedor Tributario',
+  description: 'Sistema completo para gestión de calificaciones tributarias, entidades fiscales e importaciones masivas para 15 países de América Latina',
 }
 
 export default function RootLayout({

@@ -7,7 +7,25 @@ export async function GET(request: NextRequest) {
     const country = searchParams.get('country') || undefined
     const status = searchParams.get('status') || undefined
     
-    const qualifications = await db.qualifications.findMany({ country, status })
+    const whereClause: any = {}
+    if (country) whereClause.country = country
+    if (status) whereClause.status = status
+    
+    const qualifications = await db.qualifications.findMany({
+      where: whereClause,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    })
     
     return NextResponse.json({
       success: true,
@@ -28,31 +46,59 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     
     // Validaciones básicas
-    if (!body.emisorId || !body.period || !body.amount) {
+    if (!body.emisorName || !body.period || !body.amount || !body.country || !body.userId) {
       return NextResponse.json(
-        { success: false, error: 'Campos requeridos: emisorId, period, amount' },
+        { success: false, error: 'Campos requeridos: emisorName, period, amount, country, userId' },
         { status: 400 }
       )
     }
     
-    // Verificar que el emisor existe
-    const emisor = await db.emisors.findById(body.emisorId)
-    if (!emisor) {
+    // Verificar que el usuario existe
+    const user = await db.users.findUnique({
+      where: { id: body.userId }
+    })
+    if (!user) {
       return NextResponse.json(
-        { success: false, error: 'Emisor no encontrado' },
+        { success: false, error: 'Usuario no encontrado' },
         { status: 404 }
       )
     }
     
+    // Calcular valor según UTM/UIT del país
+    const exchangeRates: Record<string, number> = {
+      CL: 64649,  // UTM Chile
+      PE: 5150,   // UIT Perú
+      CO: 42412,  // UVT Colombia
+      MX: 108.57, // UMA México
+      AR: 25000   // UF Argentina
+    }
+    
+    const factor = exchangeRates[body.country] || 1
+    const calculatedValue = parseFloat(body.amount) / factor
+    
     const newQualification = await db.qualifications.create({
-      emisorId: body.emisorId,
-      emisorName: emisor.businessName,
-      period: body.period,
-      amount: parseFloat(body.amount),
-      factorApplied: body.factorApplied || 64649, // UTM por defecto para Chile
-      calculatedValue: parseFloat(body.amount) / (body.factorApplied || 64649),
-      status: 'DRAFT',
-      country: emisor.country
+      data: {
+        emisorName: body.emisorName,
+        taxId: body.taxId || null,
+        country: body.country,
+        period: body.period,
+        amount: parseFloat(body.amount),
+        currency: body.currency || 'USD',
+        calculatedValue: calculatedValue,
+        status: 'DRAFT',
+        observations: body.observations || null,
+        documentUrl: body.documentUrl || null,
+        userId: body.userId
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
     })
     
     return NextResponse.json({
