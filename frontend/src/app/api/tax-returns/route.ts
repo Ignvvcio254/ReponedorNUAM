@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
             paymentType: true
           }
         },
-        taxAdjustments: {
+        adjustments: {
           select: {
             id: true,
             adjustmentType: true,
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
         _count: {
           select: {
             taxPayments: true,
-            taxAdjustments: true
+            adjustments: true
           }
         }
       },

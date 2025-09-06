@@ -168,7 +168,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     const hasRelatedRecords = existingReturn._count.taxPayments > 0 || 
-                              existingReturn._count.taxAdjustments > 0 || 
+                              existingReturn._count.adjustments > 0 || 
                               existingReturn._count.auditProcesses > 0
 
     if (hasRelatedRecords) {
