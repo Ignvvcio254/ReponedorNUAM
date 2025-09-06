@@ -1,22 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { Country, EntityType, EntityStatus, TaxRegime } from '@prisma/client'
+import { Country, EntityType, EntityStatus, TaxRegime } from '../../../../../generated/prisma'
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const taxEntity = await db.taxEntities.findUnique({
+    const taxEntity = await db.taxEntity.findUnique({
       where: { id: params.id },
       include: {
         taxReturns: {
           orderBy: { createdAt: 'desc' }
         },
-        taxPayments: {
-          orderBy: { paymentDate: 'desc' }
-        },
-        taxCertificates: {
+        certificates: {
           orderBy: { issuedDate: 'desc' }
         },
-        taxObligations: {
+        obligations: {
           where: { status: 'ACTIVE' }
         },
         auditProcesses: {
@@ -25,8 +22,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         _count: {
           select: {
             taxReturns: true,
-            taxPayments: true,
-            taxCertificates: true,
+            obligations: true,
+            certificates: true,
             auditProcesses: true
           }
         }
@@ -58,7 +55,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const body = await request.json()
     
     // Verificar que la entidad existe
-    const existingEntity = await db.taxEntities.findUnique({
+    const existingEntity = await db.taxEntity.findUnique({
       where: { id: params.id }
     })
 
@@ -71,7 +68,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     // Si se actualiza el taxId, verificar que no exista otro
     if (body.taxId && body.taxId !== existingEntity.taxId) {
-      const duplicateEntity = await db.taxEntities.findUnique({
+      const duplicateEntity = await db.taxEntity.findUnique({
         where: { taxId: body.taxId }
       })
       if (duplicateEntity) {
@@ -82,7 +79,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
     }
 
-    const updatedTaxEntity = await db.taxEntities.update({
+    const updatedTaxEntity = await db.taxEntity.update({
       where: { id: params.id },
       data: {
         ...(body.businessName && { businessName: body.businessName }),
@@ -104,8 +101,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         _count: {
           select: {
             taxReturns: true,
-            taxPayments: true,
-            taxCertificates: true,
+            obligations: true,
+            certificates: true,
             auditProcesses: true
           }
         }
@@ -128,14 +125,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     // Verificar que la entidad existe
-    const existingEntity = await db.taxEntities.findUnique({
+    const existingEntity = await db.taxEntity.findUnique({
       where: { id: params.id },
       include: {
         _count: {
           select: {
             taxReturns: true,
-            taxPayments: true,
-            taxCertificates: true,
+            obligations: true,
+            certificates: true,
             auditProcesses: true
           }
         }
@@ -151,8 +148,8 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
     // Verificar si tiene registros relacionados
     const hasRelatedRecords = existingEntity._count.taxReturns > 0 || 
-                              existingEntity._count.taxPayments > 0 || 
-                              existingEntity._count.taxCertificates > 0 || 
+                              existingEntity._count.obligations > 0 || 
+                              existingEntity._count.certificates > 0 || 
                               existingEntity._count.auditProcesses > 0
 
     if (hasRelatedRecords) {
@@ -162,7 +159,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       )
     }
 
-    await db.taxEntities.delete({
+    await db.taxEntity.delete({
       where: { id: params.id }
     })
 

@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    const auditProcesses = await db.auditProcesses.findMany({
+    const auditProcesses = await db.auditProcess.findMany({
       where: whereClause,
       include: {
         taxEntity: {
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Verificar que la entidad tributaria existe
-    const taxEntity = await db.taxEntities.findUnique({
+    const taxEntity = await db.taxEntity.findUnique({
       where: { id: body.taxEntityId }
     })
     if (!taxEntity) {
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Verificar que el número de auditoría no existe
-    const existingAudit = await db.auditProcesses.findUnique({
+    const existingAudit = await db.auditProcess.findUnique({
       where: { auditNumber: body.auditNumber }
     })
     if (existingAudit) {
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     
     // Verificar que la declaración existe si se especifica
     if (body.taxReturnId) {
-      const taxReturn = await db.taxReturns.findUnique({
+      const taxReturn = await db.taxReturn.findUnique({
         where: { id: body.taxReturnId }
       })
       if (!taxReturn) {
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    const newAuditProcess = await db.auditProcesses.create({
+    const newAuditProcess = await db.auditProcess.create({
       data: {
         taxEntityId: body.taxEntityId,
         taxReturnId: body.taxReturnId || null,

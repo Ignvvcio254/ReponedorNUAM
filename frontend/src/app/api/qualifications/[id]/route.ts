@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { Country, QualificationStatus, Prisma } from '../../../../../generated/prisma'
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const qualification = await db.qualifications.findUnique({
+    const qualification = await db.qualification.findUnique({
       where: { id: params.id },
       include: {
         user: {
@@ -41,7 +42,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const body = await request.json()
     
     // Verificar que la calificación existe
-    const existingQualification = await db.qualifications.findUnique({
+    const existingQualification = await db.qualification.findUnique({
       where: { id: params.id }
     })
 
@@ -64,11 +65,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
       
       const factor = exchangeRates[body.country || existingQualification.country] || 1
-      const amount = body.amount ? parseFloat(body.amount) : existingQualification.amount
-      calculatedValue = amount.toNumber() / factor
+      const amount = body.amount ? parseFloat(body.amount) : existingQualification.amount.toNumber()
+      calculatedValue = new Prisma.Decimal(amount / factor)
     }
 
-    const updatedQualification = await db.qualifications.update({
+    const updatedQualification = await db.qualification.update({
       where: { id: params.id },
       data: {
         ...(body.emisorName && { emisorName: body.emisorName }),
@@ -111,7 +112,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     // Verificar que la calificación existe
-    const existingQualification = await db.qualifications.findUnique({
+    const existingQualification = await db.qualification.findUnique({
       where: { id: params.id }
     })
 
@@ -122,7 +123,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       )
     }
 
-    await db.qualifications.delete({
+    await db.qualification.delete({
       where: { id: params.id }
     })
 

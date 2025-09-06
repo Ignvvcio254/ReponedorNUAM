@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     if (country) whereClause.country = country
     if (status) whereClause.status = status
     
-    const qualifications = await db.qualifications.findMany({
+    const qualifications = await db.qualification.findMany({
       where: whereClause,
       include: {
         user: {
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Verificar que el usuario existe
-    const user = await db.users.findUnique({
+    const user = await db.user.findUnique({
       where: { id: body.userId }
     })
     if (!user) {
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     const factor = exchangeRates[body.country] || 1
     const calculatedValue = parseFloat(body.amount) / factor
     
-    const newQualification = await db.qualifications.create({
+    const newQualification = await db.qualification.create({
       data: {
         emisorName: body.emisorName,
         taxId: body.taxId || null,

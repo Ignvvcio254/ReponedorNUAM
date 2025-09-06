@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { UserRole } from '@prisma/client'
+import { UserRole } from '../../../../generated/prisma'
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       ]
     }
     
-    const users = await db.users.findMany({
+    const users = await db.user.findMany({
       where: whereClause,
       select: {
         id: true,
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Verificar que el email no existe ya
-    const existingUser = await db.users.findUnique({
+    const existingUser = await db.user.findUnique({
       where: { email: body.email }
     })
     if (existingUser) {
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    const newUser = await db.users.create({
+    const newUser = await db.user.create({
       data: {
         email: body.email,
         name: body.name,

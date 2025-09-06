@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { PeriodType, ReturnType, ReturnStatus } from '@prisma/client'
+import { PeriodType, ReturnType, ReturnStatus } from '../../../../generated/prisma'
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       whereClause.status = { notIn: ['SUBMITTED', 'ACCEPTED'] }
     }
     
-    const taxReturns = await db.taxReturns.findMany({
+    const taxReturns = await db.taxReturn.findMany({
       where: whereClause,
       include: {
         taxEntity: {
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Verificar que la entidad tributaria existe
-    const taxEntity = await db.taxEntities.findUnique({
+    const taxEntity = await db.taxEntity.findUnique({
       where: { id: body.taxEntityId }
     })
     if (!taxEntity) {
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Verificar duplicados
-    const existingReturn = await db.taxReturns.findUnique({
+    const existingReturn = await db.taxReturn.findUnique({
       where: {
         taxEntityId_taxYear_taxPeriod_returnType: {
           taxEntityId: body.taxEntityId,
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    const newTaxReturn = await db.taxReturns.create({
+    const newTaxReturn = await db.taxReturn.create({
       data: {
         taxEntityId: body.taxEntityId,
         taxYear: parseInt(body.taxYear),

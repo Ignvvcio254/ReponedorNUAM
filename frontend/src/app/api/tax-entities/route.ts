@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { Country, EntityType, EntityStatus, TaxRegime } from '@prisma/client'
+import { Country, EntityType, EntityStatus, TaxRegime } from '../../../../generated/prisma'
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,22 +22,22 @@ export async function GET(request: NextRequest) {
       ]
     }
     
-    const taxEntities = await db.taxEntities.findMany({
+    const taxEntities = await db.taxEntity.findMany({
       where: whereClause,
       include: {
         taxReturns: {
           take: 5,
           orderBy: { createdAt: 'desc' }
         },
-        taxCertificates: {
+        certificates: {
           take: 3,
           orderBy: { issuedDate: 'desc' }
         },
         _count: {
           select: {
             taxReturns: true,
-            taxPayments: true,
-            taxCertificates: true,
+            obligations: true,
+            certificates: true,
             auditProcesses: true
           }
         }
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Verificar que el taxId no existe ya
-    const existingEntity = await db.taxEntities.findUnique({
+    const existingEntity = await db.taxEntity.findUnique({
       where: { taxId: body.taxId }
     })
     if (existingEntity) {
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    const newTaxEntity = await db.taxEntities.create({
+    const newTaxEntity = await db.taxEntity.create({
       data: {
         businessName: body.businessName,
         tradeName: body.tradeName || null,
@@ -105,8 +105,8 @@ export async function POST(request: NextRequest) {
         _count: {
           select: {
             taxReturns: true,
-            taxPayments: true,
-            taxCertificates: true,
+            obligations: true,
+            certificates: true,
             auditProcesses: true
           }
         }

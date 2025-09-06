@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { Country } from '../../../../../generated/prisma'
 
 export async function GET(request: NextRequest) {
   try {
@@ -53,28 +54,28 @@ export async function GET(request: NextRequest) {
       activeAudits
     ] = await Promise.all([
       // Calificaciones
-      db.qualifications.count({ where: whereClause }),
-      db.qualifications.count({ where: { ...whereClause, status: 'APPROVED' } }),
-      db.qualifications.count({ where: { ...whereClause, status: 'PENDING' } }),
-      db.qualifications.count({ where: { ...whereClause, status: 'REJECTED' } }),
+      db.qualification.count({ where: whereClause }),
+      db.qualification.count({ where: { ...whereClause, status: 'APPROVED' } }),
+      db.qualification.count({ where: { ...whereClause, status: 'PENDING' } }),
+      db.qualification.count({ where: { ...whereClause, status: 'REJECTED' } }),
       
       // Entidades tributarias
-      db.taxEntities.count({ where: country ? { country } : {} }),
-      db.taxEntities.count({ where: { status: 'ACTIVE', ...(country && { country }) } }),
+      db.taxEntity.count({ where: country ? { country: country as Country } : {} }),
+      db.taxEntity.count({ where: { status: 'ACTIVE', ...(country && { country: country as Country }) } }),
       
       // Declaraciones tributarias
-      db.taxReturns.count({ where: { taxEntity: country ? { country } : {}, createdAt: { gte: startDate, lte: endDate } } }),
-      db.taxReturns.count({ 
+      db.taxReturn.count({ where: { taxEntity: country ? { country: country as Country } : {}, createdAt: { gte: startDate, lte: endDate } } }),
+      db.taxReturn.count({ 
         where: { 
           dueDate: { lt: now },
           status: { notIn: ['SUBMITTED', 'ACCEPTED'] },
-          taxEntity: country ? { country } : {}
+          taxEntity: country ? { country: country as Country } : {}
         } 
       }),
       
       // Pagos tributarios
-      db.taxPayments.count({ where: { paymentDate: { gte: startDate, lte: endDate } } }),
-      db.taxPayments.count({ 
+      db.taxPayment.count({ where: { paymentDate: { gte: startDate, lte: endDate } } }),
+      db.taxPayment.count({ 
         where: { 
           verified: true,
           paymentDate: { gte: startDate, lte: endDate } 
@@ -82,8 +83,8 @@ export async function GET(request: NextRequest) {
       }),
       
       // Auditorías
-      db.auditProcesses.count({ where: { startDate: { gte: startDate, lte: endDate } } }),
-      db.auditProcesses.count({ 
+      db.auditProcess.count({ where: { startDate: { gte: startDate, lte: endDate } } }),
+      db.auditProcess.count({ 
         where: { 
           status: { in: ['INITIATED', 'IN_PROGRESS', 'PENDING_RESPONSE', 'UNDER_REVIEW'] }
         } 
@@ -91,7 +92,7 @@ export async function GET(request: NextRequest) {
     ])
 
     // Estadísticas por país
-    const qualificationsByCountry = await db.qualifications.groupBy({
+    const qualificationsByCountry = await db.qualification.groupBy({
       by: ['country'],
       where: whereClause,
       _count: true,
@@ -116,7 +117,7 @@ export async function GET(request: NextRequest) {
     `
 
     // Top emisores por calificaciones
-    const topEmisors = await db.qualifications.groupBy({
+    const topEmisors = await db.qualification.groupBy({
       by: ['emisorName'],
       where: whereClause,
       _count: true,
@@ -125,14 +126,14 @@ export async function GET(request: NextRequest) {
       },
       orderBy: {
         _count: {
-          _all: 'desc'
+          emisorName: 'desc'
         }
       },
       take: 10
     })
 
     // Estadísticas de importaciones
-    const importStats = await db.importBatches.aggregate({
+    const importStats = await db.importBatch.aggregate({
       where: {
         createdAt: { gte: startDate, lte: endDate }
       },

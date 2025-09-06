@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { PaymentMethod, PaymentType } from '@prisma/client'
+import { PaymentMethod, PaymentType } from '../../../../../generated/prisma'
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const taxPayment = await db.taxPayments.findUnique({
+    const taxPayment = await db.taxPayment.findUnique({
       where: { id: params.id },
       include: {
         taxReturn: {
@@ -40,7 +40,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const body = await request.json()
     
     // Verificar que el pago existe
-    const existingPayment = await db.taxPayments.findUnique({
+    const existingPayment = await db.taxPayment.findUnique({
       where: { id: params.id }
     })
 
@@ -53,7 +53,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     // Verificar que la declaración existe si se especifica
     if (body.taxReturnId && body.taxReturnId !== existingPayment.taxReturnId) {
-      const taxReturn = await db.taxReturns.findUnique({
+      const taxReturn = await db.taxReturn.findUnique({
         where: { id: body.taxReturnId }
       })
       if (!taxReturn) {
@@ -85,7 +85,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
     }
 
-    const updatedTaxPayment = await db.taxPayments.update({
+    const updatedTaxPayment = await db.taxPayment.update({
       where: { id: params.id },
       data: updateData,
       include: {
@@ -120,7 +120,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     // Verificar que el pago existe
-    const existingPayment = await db.taxPayments.findUnique({
+    const existingPayment = await db.taxPayment.findUnique({
       where: { id: params.id }
     })
 
@@ -139,7 +139,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       )
     }
 
-    await db.taxPayments.delete({
+    await db.taxPayment.delete({
       where: { id: params.id }
     })
 

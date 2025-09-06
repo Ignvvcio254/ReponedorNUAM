@@ -1,6 +1,6 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { Country, ImportStatus } from '../../../generated/prisma'
+import { Country, ImportStatus, Prisma } from '../../../../generated/prisma'
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar que el usuario existe
-    const user = await db.users.findUnique({
+    const user = await db.user.findUnique({
       where: { id: userId }
     })
     if (!user) {
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Crear registro de importación
-    const importBatch = await db.importBatches.create({
+    const importBatch = await db.importBatch.create({
       data: {
         fileName: file.name,
         totalRecords: lines.length - 1, // -1 para excluir headers
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     const missingHeaders = requiredHeaders.filter(h => !headers.includes(h))
     
     if (missingHeaders.length > 0) {
-      await db.importBatches.update({
+      await db.importBatch.update({
         where: { id: importBatch.id },
         data: {
           status: 'FAILED',
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
         const calculatedValue = amount / factor
 
         // Crear calificación
-        await db.qualifications.create({
+        await db.qualification.create({
           data: {
             emisorName: rowData.emisorName,
             taxId: rowData.taxId || null,
@@ -179,14 +179,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Actualizar el registro de importación
-    await db.importBatches.update({
+    await db.importBatch.update({
       where: { id: importBatch.id },
       data: {
         processedRecords: results.success + results.errors,
         successfulRecords: results.success,
         failedRecords: results.errors,
         status: results.errors > 0 && results.success === 0 ? 'FAILED' : 'COMPLETED',
-        errors: results.errorDetails.length > 0 ? { errors: results.errorDetails } : null
+        errors: results.errorDetails.length > 0 ? { errors: results.errorDetails } : Prisma.JsonNull
       }
     })
 

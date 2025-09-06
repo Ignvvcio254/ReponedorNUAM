@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { PeriodType, ReturnType, ReturnStatus } from '@prisma/client'
+import { PeriodType, ReturnType, ReturnStatus } from '../../../../../generated/prisma'
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const taxReturn = await db.taxReturns.findUnique({
+    const taxReturn = await db.taxReturn.findUnique({
       where: { id: params.id },
       include: {
         taxEntity: true,
         taxPayments: {
           orderBy: { paymentDate: 'desc' }
         },
-        taxAdjustments: {
+        adjustments: {
           orderBy: { adjustmentDate: 'desc' }
         },
         auditProcesses: {
@@ -45,7 +45,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const body = await request.json()
     
     // Verificar que la declaración existe
-    const existingReturn = await db.taxReturns.findUnique({
+    const existingReturn = await db.taxReturn.findUnique({
       where: { id: params.id }
     })
 
@@ -91,7 +91,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       updateData.filingDate = new Date()
     }
 
-    const updatedTaxReturn = await db.taxReturns.update({
+    const updatedTaxReturn = await db.taxReturn.update({
       where: { id: params.id },
       data: updateData,
       include: {
@@ -112,7 +112,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
             paymentType: true
           }
         },
-        taxAdjustments: {
+        adjustments: {
           select: {
             id: true,
             adjustmentType: true,
@@ -139,13 +139,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     // Verificar que la declaración existe
-    const existingReturn = await db.taxReturns.findUnique({
+    const existingReturn = await db.taxReturn.findUnique({
       where: { id: params.id },
       include: {
         _count: {
           select: {
             taxPayments: true,
-            taxAdjustments: true,
+            adjustments: true,
             auditProcesses: true
           }
         }
@@ -178,7 +178,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       )
     }
 
-    await db.taxReturns.delete({
+    await db.taxReturn.delete({
       where: { id: params.id }
     })
 

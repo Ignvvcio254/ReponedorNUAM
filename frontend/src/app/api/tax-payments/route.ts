@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { PaymentMethod, PaymentType } from '@prisma/client'
+import { PaymentMethod, PaymentType } from '../../../../generated/prisma'
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       if (toDate) whereClause.paymentDate.lte = new Date(toDate)
     }
     
-    const taxPayments = await db.taxPayments.findMany({
+    const taxPayments = await db.taxPayment.findMany({
       where: whereClause,
       include: {
         taxReturn: {
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     
     // Verificar que la declaración existe si se especifica
     if (body.taxReturnId) {
-      const taxReturn = await db.taxReturns.findUnique({
+      const taxReturn = await db.taxReturn.findUnique({
         where: { id: body.taxReturnId }
       })
       if (!taxReturn) {
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    const newTaxPayment = await db.taxPayments.create({
+    const newTaxPayment = await db.taxPayment.create({
       data: {
         taxReturnId: body.taxReturnId || null,
         amount: parseFloat(body.amount),

@@ -77,7 +77,7 @@ export default function QualificationsList({
   })
 
   // Obtener períodos únicos para el filtro
-  const uniquePeriods = [...new Set(qualifications.map(q => q.period))].sort().reverse()
+  const uniquePeriods = Array.from(new Set(qualifications.map(q => q.period))).sort().reverse()
 
   if (isLoading) {
     return (
