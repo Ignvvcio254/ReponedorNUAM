@@ -26,12 +26,26 @@
       "static/chunks/412-50f347f86a439387.js",
       "static/chunks/app/dashboard/page-63142443442546ff.js"
     ],
+    "/tax-entities/page": [
+      "static/chunks/webpack-02761f80ef09b837.js",
+      "static/chunks/fd9d1056-8597db0302267393.js",
+      "static/chunks/117-cd01699b23c57b1e.js",
+      "static/chunks/main-app-15c80c350adbc0d4.js",
+      "static/chunks/app/tax-entities/page-59a0ff012b8ae10d.js"
+    ],
     "/import/page": [
       "static/chunks/webpack-02761f80ef09b837.js",
       "static/chunks/fd9d1056-8597db0302267393.js",
       "static/chunks/117-cd01699b23c57b1e.js",
       "static/chunks/main-app-15c80c350adbc0d4.js",
       "static/chunks/app/import/page-278357f90d647a5d.js"
+    ],
+    "/qualifications/page": [
+      "static/chunks/webpack-02761f80ef09b837.js",
+      "static/chunks/fd9d1056-8597db0302267393.js",
+      "static/chunks/117-cd01699b23c57b1e.js",
+      "static/chunks/main-app-15c80c350adbc0d4.js",
+      "static/chunks/app/qualifications/page-d58ae3f087968fed.js"
     ],
     "/page": [
       "static/chunks/webpack-02761f80ef09b837.js",
@@ -40,20 +54,6 @@
       "static/chunks/main-app-15c80c350adbc0d4.js",
       "static/chunks/258-432c78f5a4145635.js",
       "static/chunks/app/page-0b1af55477ba066e.js"
-    ],
-    "/tax-entities/page": [
-      "static/chunks/webpack-02761f80ef09b837.js",
-      "static/chunks/fd9d1056-8597db0302267393.js",
-      "static/chunks/117-cd01699b23c57b1e.js",
-      "static/chunks/main-app-15c80c350adbc0d4.js",
-      "static/chunks/app/tax-entities/page-59a0ff012b8ae10d.js"
-    ],
-    "/qualifications/page": [
-      "static/chunks/webpack-02761f80ef09b837.js",
-      "static/chunks/fd9d1056-8597db0302267393.js",
-      "static/chunks/117-cd01699b23c57b1e.js",
-      "static/chunks/main-app-15c80c350adbc0d4.js",
-      "static/chunks/app/qualifications/page-d58ae3f087968fed.js"
     ]
   }
 }
