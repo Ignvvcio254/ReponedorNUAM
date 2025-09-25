@@ -268,7 +268,7 @@ export default function TaxContainerDashboard({ userId }: TaxContainerDashboardP
                   <div className="text-right">
                     <p className="font-semibold text-gray-900">{percentage}%</p>
                     <p className="text-sm text-gray-500">
-                      {item.totalCalculatedValue.toFixed(2)} {country?.factor}
+                      {Number(item.totalCalculatedValue || 0).toFixed(2)} {country?.factor}
                     </p>
                   </div>
                 </div>
