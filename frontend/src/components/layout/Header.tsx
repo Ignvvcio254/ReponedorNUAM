@@ -7,10 +7,10 @@ import { Logo } from '@/components/ui/Logo'
 import { cn } from '@/lib/utils'
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: '📊' },
-  { name: 'Calificaciones', href: '/qualifications', icon: '📋' },
-  { name: 'Entidades', href: '/tax-entities', icon: '🏢' },
-  { name: 'Importar', href: '/import', icon: '📤' },
+  { name: 'Dashboard', href: '/dashboard' },
+  { name: 'Calificaciones', href: '/qualifications' },
+  { name: 'Entidades', href: '/tax-entities' },
+  { name: 'Importar', href: '/import' },
 ]
 
 export function Header() {
@@ -33,13 +33,12 @@ export function Header() {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  'flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+                  'flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
                   pathname === item.href
                     ? 'bg-nuam-100 text-nuam-700 shadow-sm'
                     : 'text-gray-600 hover:text-nuam-600 hover:bg-nuam-50'
                 )}
               >
-                <span className="text-lg">{item.icon}</span>
                 <span>{item.name}</span>
               </Link>
             ))}
@@ -52,15 +51,14 @@ export function Header() {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  'flex items-center space-x-1 px-2 py-2 rounded-lg text-xs font-medium transition-all duration-200',
+                  'flex items-center px-2 py-2 rounded-lg text-xs font-medium transition-all duration-200',
                   pathname === item.href
                     ? 'bg-nuam-100 text-nuam-700 shadow-sm'
                     : 'text-gray-600 hover:text-nuam-600 hover:bg-nuam-50'
                 )}
                 title={item.name}
               >
-                <span className="text-base">{item.icon}</span>
-                <span className="hidden sm:inline">{item.name}</span>
+                <span className="sm:inline">{item.name}</span>
               </Link>
             ))}
           </nav>
@@ -119,13 +117,12 @@ export function Header() {
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
                 className={cn(
-                  'flex items-center space-x-3 px-4 py-3 rounded-lg text-base font-medium transition-all duration-200',
+                  'flex items-center px-4 py-3 rounded-lg text-base font-medium transition-all duration-200',
                   pathname === item.href
                     ? 'bg-nuam-100 text-nuam-700 shadow-sm border-l-4 border-nuam-500'
                     : 'text-gray-700 hover:text-nuam-600 hover:bg-nuam-50 active:bg-nuam-100'
                 )}
               >
-                <span className="text-xl">{item.icon}</span>
                 <span>{item.name}</span>
                 {pathname === item.href && (
                   <div className="ml-auto w-2 h-2 bg-nuam-500 rounded-full"></div>

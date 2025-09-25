@@ -149,7 +149,7 @@ async function main() {
     })
   ])
 
-  console.log('🏢 Entidades tributarias creadas:', taxEntities.length)
+  console.log('Entidades tributarias creadas:', taxEntities.length)
 
   // ===== DECLARACIONES DE IMPUESTOS =====
   const taxReturns = await Promise.all([
@@ -251,7 +251,7 @@ async function main() {
     })
   ])
 
-  console.log('📋 Declaraciones de impuestos creadas:', taxReturns.length)
+  console.log('Declaraciones de impuestos creadas:', taxReturns.length)
 
   // ===== PAGOS TRIBUTARIOS =====
   const taxPayments = await Promise.all([
@@ -301,7 +301,7 @@ async function main() {
     })
   ])
 
-  console.log('💰 Pagos tributarios creados:', taxPayments.length)
+  console.log('Pagos tributarios creados:', taxPayments.length)
 
   // ===== OBLIGACIONES TRIBUTARIAS =====
   const taxObligations = await Promise.all([
@@ -346,7 +346,7 @@ async function main() {
     })
   ])
 
-  console.log('📅 Obligaciones tributarias creadas:', taxObligations.length)
+  console.log('Obligaciones tributarias creadas:', taxObligations.length)
 
   // ===== CERTIFICADOS TRIBUTARIOS =====
   const taxCertificates = await Promise.all([
@@ -440,7 +440,7 @@ async function main() {
     })
   ])
 
-  console.log('🔍 Procesos de auditoría creados:', auditProcesses.length)
+  console.log('Procesos de auditoría creados:', auditProcesses.length)
 
   // ===== AJUSTES TRIBUTARIOS =====
   const taxAdjustments = await Promise.all([
@@ -530,7 +530,7 @@ async function main() {
     })
   ])
 
-  console.log('⚙️ Configuraciones del sistema creadas:', systemConfigs.length)
+  console.log('Configuraciones del sistema creadas:', systemConfigs.length)
 
   // ===== LOGS DE AUDITORÍA =====
   const auditLogs = await Promise.all([
@@ -574,7 +574,7 @@ async function main() {
     })
   ])
 
-  console.log('📊 Logs de auditoría creados:', auditLogs.length)
+  console.log('Logs de auditoría creados:', auditLogs.length)
 
   // ===== LOTES DE IMPORTACIÓN =====
   const importBatches = await Promise.all([
@@ -646,11 +646,11 @@ async function main() {
     })
   ])
 
-  console.log('📋 Calificaciones legacy migradas:', qualifications.length)
+  console.log('Calificaciones legacy migradas:', qualifications.length)
 
   // ===== RESUMEN FINAL =====
-  console.log('\n🎉 ¡Seeding del Contenedor Tributario NUAM completado exitosamente!')
-  console.log('\n📊 RESUMEN DE DATOS CREADOS:')
+  console.log('\nSeeding del Contenedor Tributario NUAM completado exitosamente!')
+  console.log('\nRESUMEN DE DATOS CREADOS:')
   console.log(`   • ${3} Usuarios (Admin, User, Viewer)`)
   console.log(`   • ${taxEntities.length} Entidades Tributarias`)
   console.log(`   • ${taxReturns.length} Declaraciones de Impuestos`)  
@@ -664,14 +664,14 @@ async function main() {
   console.log(`   • ${importBatches.length} Lotes de Importación`)
   console.log(`   • ${qualifications.length} Calificaciones Legacy`)
   
-  console.log('\n🌍 PAÍSES REPRESENTADOS:')
+  console.log('\nPAÍSES REPRESENTADOS:')
   console.log('   • Chile: Minera Los Andes S.A.')
   console.log('   • Perú: Textiles Peruanos S.A.C.')
   console.log('   • Colombia: Café Colombiano Exportadores S.A.S.')
   console.log('   • México: Consulting Services México S. de R.L.')
   console.log('   • Brasil: Indústria Brasileira de Tecnologia Ltda.')
   
-  console.log('\n🔍 CASOS DE USO INCLUIDOS:')
+  console.log('\nCASOS DE USO INCLUIDOS:')
   console.log('   • Entidades activas en diferentes regímenes')
   console.log('   • Declaraciones en múltiples estados')
   console.log('   • Proceso de auditoría en curso')
@@ -679,12 +679,12 @@ async function main() {
   console.log('   • Certificados vigentes y suspendidos')
   console.log('   • Importaciones exitosas y con errores')
   
-  console.log('\n✅ Base de datos lista para pruebas del contenedor tributario!')
+  console.log('\nBase de datos lista para pruebas del contenedor tributario!')
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error durante el seeding:', e)
+    console.error('Error durante el seeding:', e)
     process.exit(1)
   })
   .finally(async () => {
