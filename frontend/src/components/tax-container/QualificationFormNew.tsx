@@ -248,7 +248,7 @@ export default function QualificationFormNew({ onSubmit, onCancel, isLoading = f
               </div>
               <div className="flex justify-between border-t border-blue-300 pt-2">
                 <span className="font-medium">Valor Calculado:</span>
-                <span className="font-bold">{calculatedValue.toFixed(6)} {factorName}</span>
+                <span className="font-bold">{Number(calculatedValue).toFixed(6)} {factorName}</span>
               </div>
             </div>
           </div>

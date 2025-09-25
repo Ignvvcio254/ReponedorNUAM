@@ -239,7 +239,7 @@ export default function QualificationsList({
                         <div className="bg-blue-50 p-3 rounded-lg">
                           <span className="font-medium text-blue-700">Valor Calculado:</span>
                           <div className="text-lg font-bold text-blue-900 mt-1">
-                            {qualification.calculatedValue.toFixed(6)} {country?.factor}
+                            {Number(qualification.calculatedValue).toFixed(6)} {country?.factor}
                           </div>
                         </div>
                       )}
