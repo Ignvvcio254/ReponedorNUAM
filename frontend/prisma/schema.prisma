@@ -11,16 +11,40 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================================================
+// AUTHENTICATION & AUTHORIZATION MODELS
+// ============================================================================
+
 // Usuarios del sistema
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
+  emailVerified DateTime?
   name      String
-  role      UserRole @default(USER)
+  password  String   // Hashed with bcrypt
+  image     String?
+  role      UserRole @default(ACCOUNTANT)
+
+  // Security fields
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret  String?
+  lastLoginAt      DateTime?
+  lastLoginIp      String?
+  isActive         Boolean @default(true)
+  failedLoginAttempts Int @default(0)
+  lockedUntil      DateTime?
+  passwordResetToken String?
+  passwordResetExpires DateTime?
+
+  // Timestamps
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relaciones
+  // NextAuth relations
+  accounts      Account[]
+  sessions      Session[]
+
+  // Business relations
   qualifications Qualification[]
   importBatches  ImportBatch[]
   auditLogs      AuditLog[]
@@ -28,11 +52,58 @@ model User {
   @@map("users")
 }
 
-// Roles de usuario
+// Roles de usuario (5 niveles de acceso)
 enum UserRole {
-  ADMIN
-  USER
-  VIEWER
+  ADMIN      // Full system access + user management
+  MANAGER    // Approvals + management operations
+  ACCOUNTANT // CRUD operations on qualifications
+  AUDITOR    // Read-only + audit logs access
+  VIEWER     // Read-only limited access
+}
+
+// NextAuth Account model
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+// NextAuth Session model
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  ipAddress    String?
+  userAgent    String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// NextAuth Verification Token model
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
 }
 
 // Calificaciones Tributarias
