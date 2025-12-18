@@ -1,26 +1,14 @@
 /**
- * API: /api/audit-logs
- * Methods: GET
- * Auth: Required
- * Permissions: Admin only
+ * API: /api/audit-logs/export
+ * Method: GET
+ * Auth: Required (Admin only)
+ * Purpose: Export audit logs to JSON
  */
 
 import { NextRequest } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
-import { createOptionsResponse, createSuccessResponse, createErrorResponse } from '@/lib/api-helpers'
+import { createErrorResponse } from '@/lib/api-helpers'
 import { auditService } from '@/services/AuditService'
-
-// ============================================================================
-// CORS Configuration
-// ============================================================================
-
-export async function OPTIONS() {
-  return createOptionsResponse()
-}
-
-// ============================================================================
-// GET Handler - Search Audit Logs
-// ============================================================================
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,18 +29,19 @@ export async function GET(request: NextRequest) {
       entityType: searchParams.get('entityType') || undefined,
       startDate: searchParams.get('startDate') ? new Date(searchParams.get('startDate')!) : undefined,
       endDate: searchParams.get('endDate') ? new Date(searchParams.get('endDate')!) : undefined,
-      page: parseInt(searchParams.get('page') || '1'),
-      limit: parseInt(searchParams.get('limit') || '50'),
     }
 
-    const result = await auditService.searchAuditLogs(params)
+    const exportData = await auditService.exportAuditLogs(params)
 
-    return createSuccessResponse({
-      data: result.logs,
-      pagination: result.pagination,
+    // Return as downloadable JSON file
+    return new Response(JSON.stringify(exportData, null, 2), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Disposition': `attachment; filename="audit-logs-${new Date().toISOString().split('T')[0]}.json"`,
+      },
     })
   } catch (error) {
-    console.error('Error fetching audit logs:', error)
+    console.error('Error exporting audit logs:', error)
     const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor'
     return createErrorResponse(errorMessage, 500)
   }
