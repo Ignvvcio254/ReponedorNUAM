@@ -10,7 +10,7 @@
  * - Security feedback
  */
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Logo } from '@/components/ui/Logo'
@@ -32,10 +32,10 @@ interface FormErrors {
 }
 
 // ============================================================================
-// Component
+// Login Form Component (uses useSearchParams)
 // ============================================================================
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard'
@@ -332,5 +332,24 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+// ============================================================================
+// Page Component with Suspense
+// ============================================================================
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-nuam-50 via-white to-nuam-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-nuam-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando...</p>
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   )
 }
