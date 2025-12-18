@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
         email: true,
         name: true,
         role: true,
+        isActive: true,
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -57,11 +58,12 @@ export async function GET(request: NextRequest) {
         createdAt: 'desc'
       }
     })
-    
-    return createSuccessResponse({ users, total: users.length })
+
+    return createSuccessResponse({ data: users, total: users.length })
   } catch (error) {
     console.error('Error fetching users:', error)
-    return createErrorResponse('Error interno del servidor', 500)
+    const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor'
+    return createErrorResponse(`Error al obtener usuarios: ${errorMessage}`, 500)
   }
 }
 
@@ -138,6 +140,7 @@ export async function POST(request: NextRequest) {
     return createSuccessResponse(newUser, 201)
   } catch (error) {
     console.error('Error creating user:', error)
-    return createErrorResponse('Error interno del servidor', 500)
+    const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor'
+    return createErrorResponse(`Error al crear usuario: ${errorMessage}`, 500)
   }
 }
