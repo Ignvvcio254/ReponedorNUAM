@@ -1,4 +1,5 @@
 import { PrismaClient } from '../generated/prisma'
+import { hash } from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
@@ -6,6 +7,9 @@ async function main() {
   console.log('🌱 Iniciando seeding completo del Contenedor Tributario NUAM...')
 
   // ===== USUARIOS =====
+  // Hash passwords for demo users (not for production use)
+  const demoPassword = await hash('Demo123!NUAM', 12)
+
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@nuam.com' },
     update: {},
@@ -13,7 +17,10 @@ async function main() {
       id: 'admin-nuam-001',
       email: 'admin@nuam.com',
       name: 'Administrador NUAM',
-      role: 'ADMIN'
+      password: demoPassword,
+      role: 'ADMIN',
+      emailVerified: new Date(),
+      isActive: true,
     }
   })
 
@@ -24,7 +31,10 @@ async function main() {
       id: 'user-nuam-002',
       email: 'usuario@nuam.com',
       name: 'Usuario Regular',
-      role: 'USER'
+      password: demoPassword,
+      role: 'ACCOUNTANT',
+      emailVerified: new Date(),
+      isActive: true,
     }
   })
 
@@ -35,11 +45,15 @@ async function main() {
       id: 'auditor-nuam-003',
       email: 'auditor@nuam.com',
       name: 'Auditor NUAM',
-      role: 'VIEWER'
+      password: demoPassword,
+      role: 'AUDITOR',
+      emailVerified: new Date(),
+      isActive: true,
     }
   })
 
-  console.log('👥 Usuarios creados: Admin, User, Viewer')
+  console.log('👥 Usuarios creados: Admin, Accountant, Auditor')
+  console.log('🔑 Password para todos: Demo123!NUAM')
 
   // ===== ENTIDADES TRIBUTARIAS =====
   const taxEntities = await Promise.all([
