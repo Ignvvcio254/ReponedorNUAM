@@ -44,6 +44,9 @@ export async function GET(request: NextRequest) {
         name: true,
         role: true,
         isActive: true,
+        lastLoginAt: true,
+        lastLoginIp: true,
+        emailVerified: true,
         createdAt: true,
         updatedAt: true,
         _count: {
