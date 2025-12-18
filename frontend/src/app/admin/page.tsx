@@ -49,12 +49,20 @@ export default function AdminPage() {
         fetch('/api/audit-logs?limit=50'),
       ])
 
+      console.log('Users response status:', usersRes.status)
+      console.log('Audit response status:', auditRes.status)
+
       const usersData = await usersRes.json()
       const auditData = await auditRes.json()
 
+      console.log('Users data:', usersData)
+      console.log('Audit data:', auditData)
+
       if (usersData.success && Array.isArray(usersData.data)) {
+        console.log('Setting users:', usersData.data)
         setUsers(usersData.data)
       } else {
+        console.log('Users data not valid, setting empty array')
         setUsers([])
       }
 
