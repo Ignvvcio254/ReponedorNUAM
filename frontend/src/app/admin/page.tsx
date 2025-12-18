@@ -18,6 +18,14 @@ export default function AdminPage() {
   const [auditLogs, setAuditLogs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'users' | 'audit' | 'settings'>('users')
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [createLoading, setCreateLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'ACCOUNTANT',
+  })
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -61,6 +69,42 @@ export default function AdminPage() {
       setAuditLogs([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setCreateLoading(true)
+
+    try {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        alert('Usuario creado exitosamente')
+        setShowCreateModal(false)
+        setFormData({
+          name: '',
+          email: '',
+          password: '',
+          role: 'ACCOUNTANT',
+        })
+        loadData() // Recargar la lista de usuarios
+      } else {
+        alert('Error al crear usuario: ' + data.error)
+      }
+    } catch (error) {
+      console.error('Error creating user:', error)
+      alert('Error al crear usuario')
+    } finally {
+      setCreateLoading(false)
     }
   }
 
@@ -197,7 +241,10 @@ export default function AdminPage() {
                   <h2 className="text-lg font-semibold text-gray-900">
                     Gestión de Usuarios
                   </h2>
-                  <button className="px-4 py-2 bg-nuam-600 text-white rounded-lg hover:bg-nuam-700 transition-colors">
+                  <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="px-4 py-2 bg-nuam-600 text-white rounded-lg hover:bg-nuam-700 transition-colors"
+                  >
                     Crear Usuario
                   </button>
                 </div>
@@ -340,6 +387,113 @@ export default function AdminPage() {
             )}
           </div>
         </div>
+
+        {/* Modal Crear Usuario */}
+        {showCreateModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Crear Nuevo Usuario
+                  </h3>
+                  <button
+                    onClick={() => setShowCreateModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <form onSubmit={handleCreateUser}>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Nombre Completo
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nuam-500 focus:border-transparent"
+                        placeholder="Juan Pérez"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nuam-500 focus:border-transparent"
+                        placeholder="usuario@ejemplo.com"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Contraseña
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        minLength={8}
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nuam-500 focus:border-transparent"
+                        placeholder="Mínimo 8 caracteres"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        La contraseña debe tener al menos 8 caracteres
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Rol
+                      </label>
+                      <select
+                        value={formData.role}
+                        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nuam-500 focus:border-transparent"
+                      >
+                        <option value="VIEWER">Viewer - Solo lectura limitada</option>
+                        <option value="AUDITOR">Auditor - Lectura + logs de auditoría</option>
+                        <option value="ACCOUNTANT">Contador - CRUD de calificaciones</option>
+                        <option value="MANAGER">Manager - Aprobaciones + gestión</option>
+                        <option value="ADMIN">Admin - Acceso completo</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateModal(false)}
+                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={createLoading}
+                      className="flex-1 px-4 py-2 bg-nuam-600 text-white rounded-lg hover:bg-nuam-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {createLoading ? 'Creando...' : 'Crear Usuario'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
