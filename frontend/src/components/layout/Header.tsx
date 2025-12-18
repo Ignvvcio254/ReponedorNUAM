@@ -7,19 +7,29 @@ import { useSession, signOut } from 'next-auth/react'
 import { Logo } from '@/components/ui/Logo'
 import { cn } from '@/lib/utils'
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard' },
-  { name: 'Calificaciones', href: '/qualifications' },
-  { name: 'Entidades', href: '/tax-entities' },
-  { name: 'Importar', href: '/import' },
-  { name: 'Reportes', href: '/reports' },
-]
+const getNavigation = (userRole?: string) => {
+  const baseNavigation = [
+    { name: 'Dashboard', href: '/dashboard' },
+    { name: 'Calificaciones', href: '/qualifications' },
+    { name: 'Entidades', href: '/tax-entities' },
+    { name: 'Importar', href: '/import' },
+    { name: 'Reportes', href: '/reports' },
+  ]
+
+  if (userRole === 'ADMIN') {
+    return [...baseNavigation, { name: 'Admin', href: '/admin' }]
+  }
+
+  return baseNavigation
+}
 
 export function Header() {
   const pathname = usePathname()
   const { data: session, status } = useSession()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+
+  const navigation = getNavigation(session?.user.role)
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: '/login' })

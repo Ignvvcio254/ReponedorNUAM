@@ -6,6 +6,7 @@
  * IMPORTANT: Change the default password after first login!
  */
 
+import 'dotenv/config'
 import { PrismaClient } from '../generated/prisma'
 import { hash } from 'bcryptjs'
 
