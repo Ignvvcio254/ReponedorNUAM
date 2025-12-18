@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return createSuccessResponse({ data: users, total: users.length })
+    return createSuccessResponse(users)
   } catch (error) {
     console.error('Error fetching users:', error)
     const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor'
