@@ -10,7 +10,7 @@
  * - Helper functions: Convenient access to permission checks
  */
 
-import { UserRole } from '@prisma/client'
+import { UserRole } from '../../generated/prisma'
 import type { Resource, Action, Permission, RoleConfig } from '@/types/auth'
 
 // ============================================================================

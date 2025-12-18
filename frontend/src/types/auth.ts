@@ -5,7 +5,7 @@
  * Used throughout the application for type safety and IntelliSense.
  */
 
-import { UserRole } from '@prisma/client'
+import { UserRole } from '../../generated/prisma'
 
 // ============================================================================
 // User Types

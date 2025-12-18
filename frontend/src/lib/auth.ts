@@ -7,7 +7,7 @@
 
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options'
-import { UserRole } from '@prisma/client'
+import { UserRole } from '../../generated/prisma'
 import { PermissionChecker } from '@/lib/permissions'
 import type { AuthUser, Resource, Action } from '@/types/auth'
 

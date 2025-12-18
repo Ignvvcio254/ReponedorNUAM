@@ -5,7 +5,7 @@
  * This ensures type safety across the authentication system.
  */
 
-import { UserRole } from '@prisma/client'
+import { UserRole } from '../../generated/prisma'
 import { DefaultSession, DefaultUser } from 'next-auth'
 import { DefaultJWT } from 'next-auth/jwt'
 
