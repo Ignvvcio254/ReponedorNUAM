@@ -44,10 +44,21 @@ export default function AdminPage() {
       const usersData = await usersRes.json()
       const auditData = await auditRes.json()
 
-      if (usersData.success) setUsers(usersData.data)
-      if (auditData.success) setAuditLogs(auditData.data)
+      if (usersData.success && Array.isArray(usersData.data)) {
+        setUsers(usersData.data)
+      } else {
+        setUsers([])
+      }
+
+      if (auditData.success && Array.isArray(auditData.data)) {
+        setAuditLogs(auditData.data)
+      } else {
+        setAuditLogs([])
+      }
     } catch (error) {
       console.error('Error loading admin data:', error)
+      setUsers([])
+      setAuditLogs([])
     } finally {
       setLoading(false)
     }
@@ -118,7 +129,7 @@ export default function AdminPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Usuarios Activos</p>
                 <p className="text-2xl font-bold text-gray-900 mt-2">
-                  {(users?.filter(u => u.isActive).length || 0).toLocaleString()}
+                  {(Array.isArray(users) ? users.filter(u => u.isActive).length : 0).toLocaleString()}
                 </p>
               </div>
               <ShieldCheckIcon className="w-12 h-12 text-green-500" />
