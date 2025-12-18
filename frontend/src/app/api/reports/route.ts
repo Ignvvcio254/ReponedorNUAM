@@ -56,8 +56,8 @@ export async function GET(request: NextRequest) {
       case 'entities':
         // Reporte de entidades tributarias
         const entityWhereClause: any = {}
-        if (country) entityWhereClause.country = country
-        if (status) entityWhereClause.status = status
+        if (country) entityWhereClause.country = country as any
+        if (status) entityWhereClause.status = status as any
 
         data = await db.taxEntity.findMany({
           where: entityWhereClause,
@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
 
             // Entidades
             db.taxEntity.findMany({
-              where: country ? { country } : {},
+              where: country ? { country: country as any } : {},
               orderBy: {
                 createdAt: 'desc',
               },
@@ -208,7 +208,7 @@ export async function GET(request: NextRequest) {
         // Estadísticas generales
         const totalQuals = await db.qualification.count({ where: whereClause })
         const totalEntities = await db.taxEntity.count({
-          where: country ? { country } : {},
+          where: country ? { country: country as any } : {},
         })
 
         const statusCounts = await db.qualification.groupBy({
