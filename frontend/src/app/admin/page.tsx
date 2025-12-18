@@ -106,7 +106,7 @@ export default function AdminPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Usuarios Totales</p>
                 <p className="text-2xl font-bold text-gray-900 mt-2">
-                  {users.length}
+                  {(users?.length || 0).toLocaleString()}
                 </p>
               </div>
               <UserGroupIcon className="w-12 h-12 text-nuam-500" />
@@ -118,7 +118,7 @@ export default function AdminPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Usuarios Activos</p>
                 <p className="text-2xl font-bold text-gray-900 mt-2">
-                  {users.filter(u => u.isActive).length}
+                  {(users?.filter(u => u.isActive).length || 0).toLocaleString()}
                 </p>
               </div>
               <ShieldCheckIcon className="w-12 h-12 text-green-500" />
@@ -130,7 +130,7 @@ export default function AdminPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Eventos de Auditoría</p>
                 <p className="text-2xl font-bold text-gray-900 mt-2">
-                  {auditLogs.length}
+                  {(auditLogs?.length || 0).toLocaleString()}
                 </p>
               </div>
               <ClockIcon className="w-12 h-12 text-blue-500" />
@@ -213,7 +213,7 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {users.map((user) => (
+                      {users && users.length > 0 ? users.map((user) => (
                         <tr key={user.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
@@ -250,7 +250,13 @@ export default function AdminPage() {
                               : 'Nunca'}
                           </td>
                         </tr>
-                      ))}
+                      )) : (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500">
+                            No hay usuarios para mostrar
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -264,7 +270,7 @@ export default function AdminPage() {
                 </h2>
 
                 <div className="space-y-4">
-                  {auditLogs.map((log) => (
+                  {auditLogs && auditLogs.length > 0 ? auditLogs.map((log) => (
                     <div
                       key={log.id}
                       className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
@@ -293,7 +299,11 @@ export default function AdminPage() {
                         </div>
                       </div>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="text-center py-12 text-gray-500">
+                      No hay eventos de auditoría para mostrar
+                    </div>
+                  )}
                 </div>
               </div>
             )}

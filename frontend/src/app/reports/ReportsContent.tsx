@@ -257,7 +257,7 @@ export function ReportsContent() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Calificaciones</p>
                   <p className="text-2xl font-bold text-gray-900 mt-2">
-                    {stats.totalQualifications.toLocaleString()}
+                    {(stats.totalQualifications || 0).toLocaleString()}
                   </p>
                 </div>
                 <ChartBarIcon className="w-12 h-12 text-nuam-500" />
@@ -269,7 +269,7 @@ export function ReportsContent() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Entidades</p>
                   <p className="text-2xl font-bold text-gray-900 mt-2">
-                    {stats.totalEntities.toLocaleString()}
+                    {(stats.totalEntities || 0).toLocaleString()}
                   </p>
                 </div>
                 <TableCellsIcon className="w-12 h-12 text-blue-500" />
@@ -281,12 +281,12 @@ export function ReportsContent() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Países Activos</p>
                   <p className="text-2xl font-bold text-gray-900 mt-2">
-                    {stats.byCountry.length}
+                    {(stats.byCountry?.length || 0)}
                   </p>
                 </div>
                 <div className="w-12 h-12 flex items-center justify-center bg-green-100 rounded-full">
                   <span className="text-2xl font-bold text-green-600">
-                    {stats.byCountry.length}
+                    {(stats.byCountry?.length || 0)}
                   </span>
                 </div>
               </div>
