@@ -7,7 +7,6 @@
 import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { compare } from 'bcryptjs'
-import { PrismaAdapter } from '@auth/prisma-adapter'
 import { db } from '@/lib/db'
 import type { AuthUser } from '@/types/auth'
 
@@ -128,8 +127,8 @@ async function handleSuccessfulLogin(
 // ============================================================================
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(db) as any,
-
+  // No adapter needed for credentials provider with JWT strategy
+  
   // JWT-based sessions for scalability
   session: {
     strategy: 'jwt',
