@@ -55,39 +55,47 @@ async function isAccountLocked(userId: string): Promise<boolean> {
  * Handle failed login attempt
  */
 async function handleFailedLogin(userId: string): Promise<void> {
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    select: { failedLoginAttempts: true },
-  })
+  try {
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { failedLoginAttempts: true },
+    })
 
-  if (!user) return
+    if (!user) return
 
-  const attempts = user.failedLoginAttempts + 1
-  const isLocked = attempts >= MAX_FAILED_ATTEMPTS
+    const attempts = user.failedLoginAttempts + 1
+    const isLocked = attempts >= MAX_FAILED_ATTEMPTS
 
-  await db.user.update({
-    where: { id: userId },
-    data: {
-      failedLoginAttempts: attempts,
-      lockedUntil: isLocked
-        ? new Date(Date.now() + LOCK_DURATION_MINUTES * 60 * 1000)
-        : null,
-    },
-  })
-
-  // Create audit log for failed attempt
-  await db.auditLog.create({
-    data: {
-      action: 'LOGIN_FAILED',
-      entityType: 'User',
-      entityId: userId,
-      userId: userId,
-      newValues: {
-        attempts,
-        locked: isLocked,
+    await db.user.update({
+      where: { id: userId },
+      data: {
+        failedLoginAttempts: attempts,
+        lockedUntil: isLocked
+          ? new Date(Date.now() + LOCK_DURATION_MINUTES * 60 * 1000)
+          : null,
       },
-    },
-  })
+    })
+
+    // Create audit log for failed attempt (best effort)
+    try {
+      await db.auditLog.create({
+        data: {
+          action: 'LOGIN_FAILED',
+          entityType: 'User',
+          entityId: userId,
+          userId: userId,
+          newValues: {
+            attempts,
+            locked: isLocked,
+          },
+        },
+      })
+    } catch (auditError) {
+      console.error('Failed to create audit log:', auditError)
+    }
+  } catch (error) {
+    console.error('Error handling failed login:', error)
+  }
 }
 
 /**
@@ -97,29 +105,37 @@ async function handleSuccessfulLogin(
   userId: string,
   ipAddress?: string
 ): Promise<void> {
-  await db.user.update({
-    where: { id: userId },
-    data: {
-      failedLoginAttempts: 0,
-      lockedUntil: null,
-      lastLoginAt: new Date(),
-      lastLoginIp: ipAddress || null,
-    },
-  })
-
-  // Create audit log for successful login
-  await db.auditLog.create({
-    data: {
-      action: 'LOGIN_SUCCESS',
-      entityType: 'User',
-      entityId: userId,
-      userId: userId,
-      newValues: {
-        ipAddress,
-        timestamp: new Date().toISOString(),
+  try {
+    await db.user.update({
+      where: { id: userId },
+      data: {
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        lastLoginAt: new Date(),
+        lastLoginIp: ipAddress || null,
       },
-    },
-  })
+    })
+
+    // Create audit log for successful login (best effort)
+    try {
+      await db.auditLog.create({
+        data: {
+          action: 'LOGIN_SUCCESS',
+          entityType: 'User',
+          entityId: userId,
+          userId: userId,
+          newValues: {
+            ipAddress,
+            timestamp: new Date().toISOString(),
+          },
+        },
+      })
+    } catch (auditError) {
+      console.error('Failed to create audit log:', auditError)
+    }
+  } catch (error) {
+    console.error('Error handling successful login:', error)
+  }
 }
 
 // ============================================================================
@@ -245,34 +261,42 @@ export const authOptions: NextAuthOptions = {
   events: {
     async signIn({ user, isNewUser }) {
       if (isNewUser) {
-        await db.auditLog.create({
-          data: {
-            action: 'USER_REGISTERED',
-            entityType: 'User',
-            entityId: user.id,
-            userId: user.id,
-            newValues: {
-              email: user.email,
-              name: user.name,
+        try {
+          await db.auditLog.create({
+            data: {
+              action: 'USER_REGISTERED',
+              entityType: 'User',
+              entityId: user.id,
+              userId: user.id,
+              newValues: {
+                email: user.email,
+                name: user.name,
+              },
             },
-          },
-        })
+          })
+        } catch (error) {
+          console.error('Failed to create audit log for sign in:', error)
+        }
       }
     },
 
     async signOut({ token }) {
       if (token?.id) {
-        await db.auditLog.create({
-          data: {
-            action: 'LOGOUT',
-            entityType: 'User',
-            entityId: token.id as string,
-            userId: token.id as string,
-            newValues: {
-              timestamp: new Date().toISOString(),
+        try {
+          await db.auditLog.create({
+            data: {
+              action: 'LOGOUT',
+              entityType: 'User',
+              entityId: token.id as string,
+              userId: token.id as string,
+              newValues: {
+                timestamp: new Date().toISOString(),
+              },
             },
-          },
-        })
+          })
+        } catch (error) {
+          console.error('Failed to create audit log for sign out:', error)
+        }
       }
     },
   },
