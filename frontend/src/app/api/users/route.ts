@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
         entityType: 'User',
         entityId: newUser.id,
         userId: currentUser.id,
-        details: {
+        newValues: {
           created_email: newUser.email,
           created_role: newUser.role,
         },

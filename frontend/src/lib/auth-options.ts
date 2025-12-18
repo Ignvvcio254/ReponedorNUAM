@@ -83,7 +83,7 @@ async function handleFailedLogin(userId: string): Promise<void> {
       entityType: 'User',
       entityId: userId,
       userId: userId,
-      details: {
+      newValues: {
         attempts,
         locked: isLocked,
       },
@@ -115,7 +115,7 @@ async function handleSuccessfulLogin(
       entityType: 'User',
       entityId: userId,
       userId: userId,
-      details: {
+      newValues: {
         ipAddress,
         timestamp: new Date().toISOString(),
       },
@@ -252,7 +252,7 @@ export const authOptions: NextAuthOptions = {
             entityType: 'User',
             entityId: user.id,
             userId: user.id,
-            details: {
+            newValues: {
               email: user.email,
               name: user.name,
             },
@@ -269,7 +269,7 @@ export const authOptions: NextAuthOptions = {
             entityType: 'User',
             entityId: token.id as string,
             userId: token.id as string,
-            details: {
+            newValues: {
               timestamp: new Date().toISOString(),
             },
           },
