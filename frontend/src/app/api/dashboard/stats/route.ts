@@ -1,20 +1,32 @@
-import { NextRequest, NextResponse } from 'next/server'
+/**
+ * API: /api/dashboard/stats
+ * Methods: GET
+ * Auth: Required
+ * Permissions: Read (any authenticated user)
+ */
+
+import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { Country } from '../../../../../generated/prisma'
+import { requireAuth } from '@/lib/auth'
+import { createOptionsResponse, createSuccessResponse, createErrorResponse } from '@/lib/api-helpers'
+
+// ============================================================================
+// CORS Configuration
+// ============================================================================
 
 export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    },
-  })
+  return createOptionsResponse()
 }
+
+// ============================================================================
+// GET Handler
+// ============================================================================
 
 export async function GET(request: NextRequest) {
   try {
+    // Require authentication (all authenticated users can view dashboard)
+    await requireAuth()
     const { searchParams } = new URL(request.url)
     const country = searchParams.get('country')
     const period = searchParams.get('period') // 'month', 'quarter', 'year'
@@ -167,83 +179,63 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    const response = NextResponse.json({
-      success: true,
-      data: {
-        period: {
-          start: startDate,
-          end: endDate,
-          type: period || 'year'
+    return createSuccessResponse({
+      period: {
+        start: startDate,
+        end: endDate,
+        type: period || 'year'
+      },
+      overview: {
+        qualifications: {
+          total: totalQualifications,
+          approved: approvedQualifications,
+          pending: pendingQualifications,
+          rejected: rejectedQualifications,
+          approvalRate: totalQualifications > 0 ? ((approvedQualifications / totalQualifications) * 100).toFixed(1) : '0'
         },
-        overview: {
-          qualifications: {
-            total: totalQualifications,
-            approved: approvedQualifications,
-            pending: pendingQualifications,
-            rejected: rejectedQualifications,
-            approvalRate: totalQualifications > 0 ? ((approvedQualifications / totalQualifications) * 100).toFixed(1) : '0'
-          },
-          taxEntities: {
-            total: totalTaxEntities,
-            active: activeTaxEntities,
-            activeRate: totalTaxEntities > 0 ? ((activeTaxEntities / totalTaxEntities) * 100).toFixed(1) : '0'
-          },
-          taxReturns: {
-            total: totalTaxReturns,
-            overdue: overdueTaxReturns,
-            complianceRate: totalTaxReturns > 0 ? (((totalTaxReturns - overdueTaxReturns) / totalTaxReturns) * 100).toFixed(1) : '100'
-          },
-          taxPayments: {
-            total: totalTaxPayments,
-            verified: verifiedPayments,
-            verificationRate: totalTaxPayments > 0 ? ((verifiedPayments / totalTaxPayments) * 100).toFixed(1) : '0'
-          },
-          audits: {
-            total: totalAudits,
-            active: activeAudits
-          }
+        taxEntities: {
+          total: totalTaxEntities,
+          active: activeTaxEntities,
+          activeRate: totalTaxEntities > 0 ? ((activeTaxEntities / totalTaxEntities) * 100).toFixed(1) : '0'
         },
-        byCountry: qualificationsByCountry.map((item: any) => ({
-          country: item.country,
-          count: item._count,
-          totalAmount: item._sum.amount || 0,
-          totalCalculatedValue: item._sum.calculatedValue || 0
-        })),
-        monthlyTrends: monthlyQualifications,
-        topEmisors: topEmisors.map((item: any) => ({
-          name: item.emisorName,
-          count: item._count,
-          totalAmount: item._sum.amount || 0
-        })),
-        imports: {
-          totalBatches: importStats._count,
-          totalRecords: importStats._sum.totalRecords || 0,
-          successfulRecords: importStats._sum.successfulRecords || 0,
-          failedRecords: importStats._sum.failedRecords || 0,
-          successRate: (importStats._sum.totalRecords || 0) > 0 ? 
-            (((importStats._sum.successfulRecords || 0) / (importStats._sum.totalRecords || 0)) * 100).toFixed(1) : '0'
+        taxReturns: {
+          total: totalTaxReturns,
+          overdue: overdueTaxReturns,
+          complianceRate: totalTaxReturns > 0 ? (((totalTaxReturns - overdueTaxReturns) / totalTaxReturns) * 100).toFixed(1) : '100'
+        },
+        taxPayments: {
+          total: totalTaxPayments,
+          verified: verifiedPayments,
+          verificationRate: totalTaxPayments > 0 ? ((verifiedPayments / totalTaxPayments) * 100).toFixed(1) : '0'
+        },
+        audits: {
+          total: totalAudits,
+          active: activeAudits
         }
+      },
+      byCountry: qualificationsByCountry.map((item: any) => ({
+        country: item.country,
+        count: item._count,
+        totalAmount: item._sum.amount || 0,
+        totalCalculatedValue: item._sum.calculatedValue || 0
+      })),
+      monthlyTrends: monthlyQualifications,
+      topEmisors: topEmisors.map((item: any) => ({
+        name: item.emisorName,
+        count: item._count,
+        totalAmount: item._sum.amount || 0
+      })),
+      imports: {
+        totalBatches: importStats._count,
+        totalRecords: importStats._sum.totalRecords || 0,
+        successfulRecords: importStats._sum.successfulRecords || 0,
+        failedRecords: importStats._sum.failedRecords || 0,
+        successRate: (importStats._sum.totalRecords || 0) > 0 ?
+          (((importStats._sum.successfulRecords || 0) / (importStats._sum.totalRecords || 0)) * 100).toFixed(1) : '0'
       }
     })
-    
-    // Add CORS headers
-    response.headers.set('Access-Control-Allow-Origin', '*')
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type')
-    
-    return response
   } catch (error) {
     console.error('Error fetching dashboard stats:', error)
-    const response = NextResponse.json(
-      { success: false, error: 'Error interno del servidor' },
-      { status: 500 }
-    )
-    
-    // Add CORS headers to error response
-    response.headers.set('Access-Control-Allow-Origin', '*')
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type')
-    
-    return response
+    return createErrorResponse(error as Error)
   }
 }

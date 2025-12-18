@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useSession, signOut } from 'next-auth/react'
 import { Logo } from '@/components/ui/Logo'
 import { cn } from '@/lib/utils'
 
@@ -16,7 +17,13 @@ const navigation = [
 
 export function Header() {
   const pathname = usePathname()
+  const { data: session, status } = useSession()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: '/login' })
+  }
 
   return (
     <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
@@ -64,6 +71,41 @@ export function Header() {
             ))}
           </nav>
 
+          {/* User Menu - Desktop & Tablet */}
+          {status === 'authenticated' && session?.user && (
+            <div className="hidden md:flex items-center space-x-4">
+              <div className="relative">
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-900">
+                      {session.user.name}
+                    </p>
+                    <p className="text-xs text-gray-500">{session.user.role}</p>
+                  </div>
+                  <div className="w-8 h-8 bg-nuam-600 rounded-full flex items-center justify-center">
+                    <span className="text-white text-sm font-medium">
+                      {session.user.name?.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                    >
+                      Cerrar sesión
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Mobile menu button */}
           <div className="md:hidden">
             <button
@@ -107,7 +149,7 @@ export function Header() {
           className={cn(
             'md:hidden transition-all duration-300 ease-in-out overflow-hidden',
             mobileMenuOpen
-              ? 'max-h-64 opacity-100 pb-4'
+              ? 'max-h-96 opacity-100 pb-4'
               : 'max-h-0 opacity-0 pb-0'
           )}
         >
@@ -130,6 +172,27 @@ export function Header() {
                 )}
               </Link>
             ))}
+
+            {/* User Info & Logout - Mobile */}
+            {status === 'authenticated' && session?.user && (
+              <>
+                <div className="border-t border-gray-200 mt-2 pt-2 px-4 py-2">
+                  <p className="text-sm font-medium text-gray-900">
+                    {session.user.name}
+                  </p>
+                  <p className="text-xs text-gray-500">{session.user.email}</p>
+                  <p className="text-xs text-nuam-600 font-medium mt-1">
+                    {session.user.role}
+                  </p>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="text-left px-4 py-3 rounded-lg text-base font-medium text-red-600 hover:bg-red-50 active:bg-red-100 transition-all duration-200"
+                >
+                  Cerrar sesión
+                </button>
+              </>
+            )}
           </nav>
         </div>
       </div>

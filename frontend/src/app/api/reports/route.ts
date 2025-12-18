@@ -1,19 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server'
+/**
+ * API: /api/reports
+ * Methods: GET
+ * Auth: Required
+ * Permissions: Read reports
+ */
+
+import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
+import { requirePermission } from '@/lib/auth'
+import { createOptionsResponse, createSuccessResponse, createErrorResponse } from '@/lib/api-helpers'
+
+// ============================================================================
+// CORS Configuration
+// ============================================================================
 
 export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    },
-  })
+  return createOptionsResponse()
 }
+
+// ============================================================================
+// GET Handler
+// ============================================================================
 
 export async function GET(request: NextRequest) {
   try {
+    // Require authentication and read permission for reports
+    await requirePermission('reports', 'read')
     const { searchParams } = new URL(request.url)
     const reportType = searchParams.get('type') || 'summary'
     const country = searchParams.get('country') || undefined
@@ -247,15 +259,11 @@ export async function GET(request: NextRequest) {
         break
 
       default:
-        return NextResponse.json(
-          { success: false, error: 'Tipo de reporte inválido' },
-          { status: 400 }
-        )
+        return createErrorResponse('Tipo de reporte inválido', 400)
     }
 
-    const response = NextResponse.json({
-      success: true,
-      data: data,
+    return createSuccessResponse({
+      data,
       filters: {
         type: reportType,
         country,
@@ -264,23 +272,8 @@ export async function GET(request: NextRequest) {
         status,
       },
     })
-
-    response.headers.set('Access-Control-Allow-Origin', '*')
-    response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS')
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type')
-
-    return response
   } catch (error) {
     console.error('Error generating report:', error)
-    const response = NextResponse.json(
-      { success: false, error: 'Error al generar el reporte' },
-      { status: 500 }
-    )
-
-    response.headers.set('Access-Control-Allow-Origin', '*')
-    response.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS')
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type')
-
-    return response
+    return createErrorResponse(error as Error)
   }
 }
