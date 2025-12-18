@@ -11,6 +11,7 @@ const navigation = [
   { name: 'Calificaciones', href: '/qualifications' },
   { name: 'Entidades', href: '/tax-entities' },
   { name: 'Importar', href: '/import' },
+  { name: 'Reportes', href: '/reports' },
 ]
 
 export function Header() {
