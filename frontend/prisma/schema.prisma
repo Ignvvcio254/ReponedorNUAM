@@ -208,18 +208,18 @@ enum ImportStatus {
 model AuditLog {
   id            String   @id @default(cuid())
   action        String   // CREATE, UPDATE, DELETE
-  entityType    String   // qualification, user, etc.
-  entityId      String
-  oldValues     Json?
-  newValues     Json?
-  createdAt     DateTime @default(now())
+  entityType    String   @map("entity_type") // qualification, user, etc.
+  entityId      String   @map("entity_id")
+  oldValues     Json?    @map("old_values")
+  newValues     Json?    @map("new_values")
+  createdAt     DateTime @default(now()) @map("created_at")
   
   // Usuario que realizó la acción
-  userId        String?
+  userId        String?  @map("user_id")
   user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   
   // Calificación relacionada (si aplica)
-  qualificationId String?
+  qualificationId String? @map("qualification_id")
   qualification   Qualification? @relation(fields: [qualificationId], references: [id], onDelete: Cascade)
 
   @@map("audit_logs")
