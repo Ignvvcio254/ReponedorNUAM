@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import QualificationsList from '@/components/tax-container/QualificationsList'
 import QualificationFormNew from '@/components/tax-container/QualificationFormNew'
+import { useToast } from '@/components/ui/ToastContainer'
 
 interface Qualification {
   id: string
@@ -29,6 +30,7 @@ interface Qualification {
 }
 
 export default function QualificationsPage() {
+  const toast = useToast()
   const [qualifications, setQualifications] = useState<Qualification[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -81,13 +83,14 @@ export default function QualificationsPage() {
         const data = await response.json()
         
         if (data.success) {
+          toast.success('Calificación eliminada exitosamente')
           await fetchQualifications() // Refresh the list
         } else {
-          alert('Error al eliminar la calificación: ' + data.error)
+          toast.error('Error al eliminar la calificación: ' + data.error)
         }
       } catch (error) {
         console.error('Error deleting qualification:', error)
-        alert('Error al eliminar la calificación')
+        toast.error('Error al eliminar la calificación')
       }
     }
   }
@@ -107,13 +110,14 @@ export default function QualificationsPage() {
         const data = await response.json()
         
         if (data.success) {
+          toast.success('Calificación aprobada exitosamente')
           await fetchQualifications() // Refresh the list
         } else {
-          alert('Error al aprobar la calificación: ' + data.error)
+          toast.error('Error al aprobar la calificación: ' + data.error)
         }
       } catch (error) {
         console.error('Error approving qualification:', error)
-        alert('Error al aprobar la calificación')
+        toast.error('Error al aprobar la calificación')
       }
     }
   }
@@ -135,13 +139,14 @@ export default function QualificationsPage() {
         const data = await response.json()
         
         if (data.success) {
+          toast.success('Calificación rechazada')
           await fetchQualifications() // Refresh the list
         } else {
-          alert('Error al rechazar la calificación: ' + data.error)
+          toast.error('Error al rechazar la calificación: ' + data.error)
         }
       } catch (error) {
         console.error('Error rejecting qualification:', error)
-        alert('Error al rechazar la calificación')
+        toast.error('Error al rechazar la calificación')
       }
     }
   }
@@ -173,15 +178,16 @@ export default function QualificationsPage() {
       const data = await response.json()
       
       if (data.success) {
+        toast.success(editingQualification ? 'Calificación actualizada exitosamente' : 'Calificación creada exitosamente')
         setShowForm(false)
         setEditingQualification(null)
         await fetchQualifications() // Refresh the list
       } else {
-        alert('Error al guardar la calificación: ' + data.error)
+        toast.error('Error al guardar la calificación: ' + data.error)
       }
     } catch (error) {
       console.error('Error submitting form:', error)
-      alert('Error al guardar la calificación')
+      toast.error('Error al guardar la calificación')
     } finally {
       setIsSubmitting(false)
     }

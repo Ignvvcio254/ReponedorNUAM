@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/Input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { api } from '@/lib/api'
 import { COUNTRIES, TAX_FACTORS, PERIODS } from '@/lib/constants'
+import { useToast } from '@/components/ui/ToastContainer'
 
 interface QualificationFormProps {
   onSuccess?: () => void
@@ -13,6 +14,7 @@ interface QualificationFormProps {
 }
 
 export function QualificationForm({ onSuccess, initialData }: QualificationFormProps) {
+  const toast = useToast()
   const [formData, setFormData] = useState({
     emisorId: initialData?.emisorId || '',
     emisorName: initialData?.emisorName || '',
@@ -59,8 +61,8 @@ export function QualificationForm({ onSuccess, initialData }: QualificationFormP
         country: 'CL',
         taxId: ''
       })
-      
-      alert('Calificación creada exitosamente')
+
+      toast.success('Calificación creada exitosamente')
     } catch (err: any) {
       setError(err.message || 'Error al crear la calificación')
     } finally {

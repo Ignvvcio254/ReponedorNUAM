@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { useToast } from '@/components/ui/ToastContainer'
 
 interface ImportResult {
   success: number
@@ -15,6 +16,7 @@ interface ImportResult {
 }
 
 export function BulkImport({ onSuccess }: { onSuccess?: () => void }) {
+  const toast = useToast()
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<any[]>([])
   const [importing, setImporting] = useState(false)
@@ -85,10 +87,10 @@ export function BulkImport({ onSuccess }: { onSuccess?: () => void }) {
       if (result.success > 0) {
         if (onSuccess) onSuccess()
       } else {
-        alert('Error en la importación: ' + result.error)
+        toast.error('Error en la importación: ' + result.error)
       }
     } catch (error) {
-      alert('Error al procesar el archivo: ' + (error as Error).message)
+      toast.error('Error al procesar el archivo: ' + (error as Error).message)
     } finally {
       setImporting(false)
     }

@@ -2,8 +2,10 @@
 
 import { Button } from '@/components/ui/Button'
 import { BulkImport } from '@/components/forms/BulkImport'
+import { useToast } from '@/components/ui/ToastContainer'
 
 export default function ImportPage() {
+  const toast = useToast()
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Page Header */}
@@ -35,12 +37,12 @@ export default function ImportPage() {
       </div>
 
       {/* Main Content */}
-      <BulkImport 
+      <BulkImport
         onSuccess={() => {
-          alert('Importación completada exitosamente')
+          toast.success('Importación completada exitosamente')
           // Opcional: redirigir a la lista de calificaciones
           // window.location.href = '/qualifications'
-        }} 
+        }}
       />
     </div>
   )

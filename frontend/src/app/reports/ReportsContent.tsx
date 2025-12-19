@@ -19,6 +19,7 @@ import {
   type TaxEntityReport,
   type SummaryReport,
 } from '@/lib/excel-export'
+import { useToast } from '@/components/ui/ToastContainer'
 
 const COUNTRIES = [
   { code: 'CL', name: 'Chile' },
@@ -47,6 +48,7 @@ const STATUS_OPTIONS = [
 ]
 
 export function ReportsContent() {
+  const toast = useToast()
   const { data: session, status } = useSession()
   const router = useRouter()
   const [reportType, setReportType] = useState<'qualifications' | 'entities' | 'summary' | 'complete'>('summary')
@@ -102,11 +104,11 @@ export function ReportsContent() {
       if (result.success) {
         setData(result.data)
       } else {
-        alert('Error al cargar el reporte: ' + result.error)
+        toast.error('Error al cargar el reporte: ' + result.error)
       }
     } catch (error) {
       console.error('Error loading report:', error)
-      alert('Error al cargar el reporte')
+      toast.error('Error al cargar el reporte')
     } finally {
       setLoading(false)
     }
@@ -114,7 +116,7 @@ export function ReportsContent() {
 
   const handleExport = () => {
     if (!data) {
-      alert('No hay datos para exportar. Genera un reporte primero.')
+      toast.info('No hay datos para exportar. Genera un reporte primero.')
       return
     }
 
@@ -208,10 +210,10 @@ export function ReportsContent() {
           break
       }
 
-      alert('Archivo Excel exportado exitosamente')
+      toast.success('Archivo Excel exportado exitosamente')
     } catch (error) {
       console.error('Error exporting:', error)
-      alert('Error al exportar el archivo')
+      toast.error('Error al exportar el archivo')
     }
   }
 

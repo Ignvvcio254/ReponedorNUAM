@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import TaxEntityList from '@/components/tax-container/TaxEntityList'
 import TaxEntityForm from '@/components/tax-container/TaxEntityForm'
+import { useToast } from '@/components/ui/ToastContainer'
 
 interface TaxEntity {
   id: string
@@ -31,6 +32,7 @@ interface TaxEntity {
 }
 
 export default function TaxEntitiesPage() {
+  const toast = useToast()
   const [entities, setEntities] = useState<TaxEntity[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -85,11 +87,11 @@ export default function TaxEntitiesPage() {
         if (data.success) {
           await fetchEntities() // Refresh the list
         } else {
-          alert('Error al eliminar la entidad: ' + data.error)
+          toast.error('Error al eliminar la entidad: ' + data.error)
         }
       } catch (error) {
         console.error('Error deleting entity:', error)
-        alert('Error al eliminar la entidad')
+        toast.error('Error al eliminar la entidad')
       }
     }
   }
@@ -119,11 +121,11 @@ export default function TaxEntitiesPage() {
         setEditingEntity(null)
         await fetchEntities() // Refresh the list
       } else {
-        alert('Error al guardar la entidad: ' + data.error)
+        toast.error('Error al guardar la entidad: ' + data.error)
       }
     } catch (error) {
       console.error('Error submitting form:', error)
-      alert('Error al guardar la entidad')
+      toast.error('Error al guardar la entidad')
     } finally {
       setIsSubmitting(false)
     }
