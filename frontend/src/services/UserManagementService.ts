@@ -134,16 +134,34 @@ export class UserManagementService {
   async updateUser(userId: string, data: UserUpdateData, updatedBy: string) {
     const user = await this.getUserById(userId)
 
-    // Prepare update data
+    // Prepare update data for database
     const updateData: any = {}
+    const auditChanges: any = {} // Sanitized data for audit log
 
-    if (data.name !== undefined) updateData.name = data.name
-    if (data.email !== undefined) updateData.email = data.email
-    if (data.role !== undefined) updateData.role = data.role
-    if (data.isActive !== undefined) updateData.isActive = data.isActive
+    if (data.name !== undefined) {
+      updateData.name = data.name
+      auditChanges.name = data.name
+    }
 
+    if (data.email !== undefined) {
+      updateData.email = data.email
+      auditChanges.email = data.email
+    }
+
+    if (data.role !== undefined) {
+      updateData.role = data.role
+      auditChanges.role = data.role
+    }
+
+    if (data.isActive !== undefined) {
+      updateData.isActive = data.isActive
+      auditChanges.isActive = data.isActive
+    }
+
+    // Hash password but don't store hash in audit log (security best practice)
     if (data.password) {
       updateData.password = await hash(data.password, this.SALT_ROUNDS)
+      auditChanges.password_changed = true // Just flag that it was changed
     }
 
     const updatedUser = await db.user.update({
@@ -159,7 +177,7 @@ export class UserManagementService {
       },
     })
 
-    // Create audit log
+    // Create audit log with sanitized data (no password hashes)
     await db.auditLog.create({
       data: {
         action: 'UPDATE',
@@ -172,7 +190,7 @@ export class UserManagementService {
           role: user.role,
           isActive: user.isActive,
         },
-        newValues: updateData,
+        newValues: auditChanges, // Use sanitized data
       },
     })
 
