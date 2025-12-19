@@ -1,8 +1,9 @@
 {
   "name": "nuam-tax-frontend",
-  "buildCommand": "npm run build",
+  "buildCommand": "prisma generate && npm run build",
   "outputDirectory": ".next",
   "installCommand": "npm install",
+  "framework": "nextjs",
   "env": {
     "NODE_ENV": "production",
     "NEXT_PUBLIC_ENV": "production"
