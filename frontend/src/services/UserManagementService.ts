@@ -213,12 +213,12 @@ export class UserManagementService {
   /**
    * Change user role
    */
-  async changeUserRole(userId: string, newRole: UserRole, updatedBy: string) {
+  async changeUserRole(userId: string, targetRole: UserRole, updatedBy: string) {
     const user = await this.getUserById(userId)
 
     const updatedUser = await db.user.update({
       where: { id: userId },
-      data: { role: newRole },
+      data: { role: targetRole },
       select: {
         id: true,
         email: true,
@@ -234,7 +234,7 @@ export class UserManagementService {
         entityId: userId,
         userId: updatedBy,
         oldValues: { role: user.role },
-        newValues: { role: newRole },
+        newValues: { role: targetRole },
       },
     })
 
@@ -327,8 +327,8 @@ export class UserManagementService {
   /**
    * Reset user password
    */
-  async resetUserPassword(userId: string, newPassword: string, resetBy: string) {
-    const hashedPassword = await hash(newPassword, this.SALT_ROUNDS)
+  async resetUserPassword(userId: string, targetPassword: string, resetBy: string) {
+    const hashedPassword = await hash(targetPassword, this.SALT_ROUNDS)
 
     await db.user.update({
       where: { id: userId },

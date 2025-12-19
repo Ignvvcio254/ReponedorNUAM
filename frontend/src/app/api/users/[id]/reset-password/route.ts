@@ -25,19 +25,19 @@ export async function POST(
     }
 
     const body = await request.json()
-    const { newPassword } = body
+    const { newPassword: passwordValue } = body
 
-    if (!newPassword) {
+    if (!passwordValue) {
       return createErrorResponse('Nueva contraseña es requerida', 400)
     }
 
-    if (newPassword.length < 8) {
+    if (passwordValue.length < 8) {
       return createErrorResponse('La contraseña debe tener al menos 8 caracteres', 400)
     }
 
     const result = await userManagementService.resetUserPassword(
       params.id,
-      newPassword,
+      passwordValue,
       currentUser.id
     )
 

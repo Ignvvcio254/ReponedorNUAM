@@ -26,24 +26,24 @@ export async function POST(
     }
 
     const body = await request.json()
-    const { role } = body
+    const { role: targetRole } = body
 
-    if (!role) {
+    if (!targetRole) {
       return createErrorResponse('Rol es requerido', 400)
     }
 
     const validRoles = ['ADMIN', 'MANAGER', 'ACCOUNTANT', 'AUDITOR', 'VIEWER']
-    if (!validRoles.includes(role)) {
+    if (!validRoles.includes(targetRole)) {
       return createErrorResponse('Rol inválido', 400)
     }
 
-    if (currentUser.id === params.id && role !== 'ADMIN') {
+    if (currentUser.id === params.id && targetRole !== 'ADMIN') {
       return createErrorResponse('No puedes cambiar tu propio rol de administrador', 400)
     }
 
     const result = await userManagementService.changeUserRole(
       params.id,
-      role as UserRole,
+      targetRole as UserRole,
       currentUser.id
     )
 
