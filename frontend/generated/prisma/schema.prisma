@@ -1,0 +1,633 @@
+// NUAM Tax Container System - Prisma Schema
+// Sistema de Contenedor Tributario Latinoamericano
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// AUTHENTICATION & AUTHORIZATION MODELS
+// ============================================================================
+
+// Usuarios del sistema
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String
+  password      String // Hashed with bcrypt
+  image         String?
+  role          UserRole  @default(ACCOUNTANT)
+
+  // Security fields
+  twoFactorEnabled     Boolean   @default(false)
+  twoFactorSecret      String?
+  lastLoginAt          DateTime?
+  lastLoginIp          String?
+  isActive             Boolean   @default(true)
+  failedLoginAttempts  Int       @default(0)
+  lockedUntil          DateTime?
+  passwordResetToken   String?
+  passwordResetExpires DateTime?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // NextAuth relations
+  accounts Account[]
+  sessions Session[]
+
+  // Business relations
+  qualifications Qualification[]
+  importBatches  ImportBatch[]
+  auditLogs      AuditLog[]
+
+  @@map("users")
+}
+
+// Roles de usuario (5 niveles de acceso)
+enum UserRole {
+  ADMIN // Full system access + user management
+  MANAGER // Approvals + management operations
+  ACCOUNTANT // CRUD operations on qualifications
+  AUDITOR // Read-only + audit logs access
+  VIEWER // Read-only limited access
+}
+
+// NextAuth Account model
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+// NextAuth Session model
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  ipAddress    String?
+  userAgent    String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// NextAuth Verification Token model
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// Calificaciones Tributarias
+model Qualification {
+  id String @id @default(cuid())
+
+  // Información del emisor
+  emisorName String
+  taxId      String?
+
+  // Información geográfica
+  country Country
+
+  // Información temporal
+  period String
+
+  // Información monetaria
+  amount          Decimal  @db.Decimal(15, 2)
+  currency        String   @default("USD")
+  calculatedValue Decimal? @db.Decimal(15, 6)
+
+  // Estado y procesamiento
+  status          QualificationStatus @default(DRAFT)
+  processingDate  DateTime?
+  approvalDate    DateTime?
+  rejectionReason String?
+
+  // Metadatos
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Información adicional
+  observations String?
+  documentUrl  String?
+
+  // Relaciones
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Auditoría
+  auditLogs AuditLog[]
+
+  @@map("qualifications")
+}
+
+// Países soportados en Latinoamérica
+enum Country {
+  CL // Chile
+  PE // Perú  
+  CO // Colombia
+  MX // México
+  AR // Argentina
+  BR // Brasil
+  UY // Uruguay
+  PY // Paraguay
+  BO // Bolivia
+  EC // Ecuador
+  VE // Venezuela
+  PA // Panamá
+  CR // Costa Rica
+  GT // Guatemala
+  US // Estados Unidos
+}
+
+// Estados de calificación
+enum QualificationStatus {
+  DRAFT // Borrador
+  PENDING // Pendiente de aprobación
+  APPROVED // Aprobado
+  REJECTED // Rechazado
+  EXPIRED // Expirado
+}
+
+// Importaciones masivas
+model ImportBatch {
+  id                String       @id @default(cuid())
+  fileName          String
+  totalRecords      Int
+  processedRecords  Int          @default(0)
+  successfulRecords Int          @default(0)
+  failedRecords     Int          @default(0)
+  status            ImportStatus @default(PROCESSING)
+  errors            Json?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  // Relación con usuario
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("import_batches")
+}
+
+enum ImportStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// Auditoría del sistema
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String // CREATE, UPDATE, DELETE
+  entityType String // qualification, user, etc.
+  entityId   String
+  oldValues  Json?
+  newValues  Json?
+  createdAt  DateTime @default(now())
+
+  // Usuario que realizó la acción
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Calificación relacionada (si aplica)
+  qualificationId String?
+  qualification   Qualification? @relation(fields: [qualificationId], references: [id], onDelete: Cascade)
+
+  @@map("audit_logs")
+}
+
+// Configuración del sistema
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("system_config")
+}
+
+// ===== MODELOS ESPECÍFICOS PARA CONTENEDOR TRIBUTARIO =====
+
+// Empresas/Entidades Tributarias
+model TaxEntity {
+  id String @id @default(cuid())
+
+  // Identificación
+  businessName String
+  tradeName    String?
+  taxId        String     @unique // RUT, RUC, RFC, etc.
+  entityType   EntityType
+
+  // Ubicación
+  country    Country
+  state      String?
+  city       String?
+  address    String?
+  postalCode String?
+
+  // Información fiscal
+  taxRegime        TaxRegime
+  economicActivity String?
+  naicsCode        String? // Código de actividad económica
+
+  // Estado
+  status           EntityStatus @default(ACTIVE)
+  registrationDate DateTime?
+
+  // Metadatos
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  taxReturns     TaxReturn[]
+  obligations    TaxObligation[]
+  certificates   TaxCertificate[]
+  auditProcesses AuditProcess[]
+
+  @@map("tax_entities")
+}
+
+enum EntityType {
+  CORPORATION // Sociedad Anónima
+  LLC // Sociedad de Responsabilidad Limitada
+  PARTNERSHIP // Sociedad
+  SOLE_PROPRIETOR // Persona Natural
+  NGO // ONG
+  GOVERNMENT // Entidad Gubernamental
+  FOREIGN // Entidad Extranjera
+}
+
+enum EntityStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  DISSOLVED
+  UNDER_AUDIT
+}
+
+enum TaxRegime {
+  GENERAL // Régimen General
+  SIMPLIFIED // Régimen Simplificado
+  SPECIAL // Régimen Especial
+  EXEMPT // Exento
+  SMALL_BUSINESS // Pequeña Empresa
+  MONOTAX // Monotributo (Argentina)
+  SIMPLES // Simples Nacional (Brasil)
+}
+
+// Declaraciones/Retornos de Impuestos
+model TaxReturn {
+  id String @id @default(cuid())
+
+  // Identificación
+  taxEntityId String
+  taxEntity   TaxEntity @relation(fields: [taxEntityId], references: [id], onDelete: Cascade)
+
+  // Información del periodo
+  taxYear    Int
+  taxPeriod  String // "2024-Q1", "2024-01", "2024", etc.
+  periodType PeriodType
+
+  // Tipo de declaración
+  returnType ReturnType
+  formCode   String? // Código del formulario (ej: "1040", "22", etc.)
+
+  // Montos
+  grossIncome   Decimal? @db.Decimal(15, 2)
+  taxableIncome Decimal? @db.Decimal(15, 2)
+  taxOwed       Decimal? @db.Decimal(15, 2)
+  taxPaid       Decimal? @db.Decimal(15, 2)
+  taxRefund     Decimal? @db.Decimal(15, 2)
+  penalties     Decimal? @db.Decimal(15, 2)
+  interest      Decimal? @db.Decimal(15, 2)
+  currency      String   @default("USD")
+
+  // Estado y fechas
+  status        ReturnStatus @default(DRAFT)
+  filingDate    DateTime?
+  dueDate       DateTime
+  extensionDate DateTime?
+
+  // Documentos
+  originalDocument  String? // URL del documento original
+  processedDocument String? // URL del documento procesado
+  attachments       Json? // URLs de anexos
+
+  // Validación y calidad
+  validationScore Decimal? @db.Decimal(3, 2) // 0.00 - 1.00
+  requiresReview  Boolean  @default(false)
+  reviewNotes     String?
+
+  // Metadatos
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  submittedAt DateTime?
+
+  // Relaciones
+  taxPayments    TaxPayment[]
+  adjustments    TaxAdjustment[]
+  auditProcesses AuditProcess[]
+
+  @@unique([taxEntityId, taxYear, taxPeriod, returnType])
+  @@map("tax_returns")
+}
+
+enum PeriodType {
+  ANNUAL // Anual
+  QUARTERLY // Trimestral
+  MONTHLY // Mensual
+  BIMONTHLY // Bimestral
+  WEEKLY // Semanal
+}
+
+enum ReturnType {
+  INCOME_TAX // Impuesto a la Renta
+  VAT // IVA
+  PAYROLL_TAX // Impuestos de Nómina
+  PROPERTY_TAX // Impuesto Predial
+  EXCISE_TAX // Impuestos Especiales
+  CUSTOMS // Aduanas
+  SOCIAL_SECURITY // Seguridad Social
+  OTHER // Otros
+}
+
+enum ReturnStatus {
+  DRAFT // Borrador
+  READY // Listo para enviar
+  SUBMITTED // Enviado
+  ACCEPTED // Aceptado
+  REJECTED // Rechazado
+  UNDER_REVIEW // En revisión
+  AMENDED // Enmendado
+  AUDIT // En auditoría
+}
+
+// Obligaciones Tributarias
+model TaxObligation {
+  id String @id @default(cuid())
+
+  taxEntityId String
+  taxEntity   TaxEntity @relation(fields: [taxEntityId], references: [id], onDelete: Cascade)
+
+  // Detalles de la obligación
+  obligationType ReturnType
+  description    String
+
+  // Frecuencia y fechas
+  frequency PeriodType
+  dueDay    Int? // Día de vencimiento (1-31)
+  dueMonth  Int? // Mes de vencimiento (1-12)
+
+  // Estado
+  status ObligationStatus @default(ACTIVE)
+
+  // Automatización
+  autoGenerate Boolean @default(false)
+  reminderDays Int     @default(7)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tax_obligations")
+}
+
+enum ObligationStatus {
+  ACTIVE
+  SUSPENDED
+  COMPLETED
+  CANCELLED
+}
+
+// Pagos de Impuestos
+model TaxPayment {
+  id String @id @default(cuid())
+
+  taxReturnId String?
+  taxReturn   TaxReturn? @relation(fields: [taxReturnId], references: [id], onDelete: SetNull)
+
+  // Información del pago
+  amount      Decimal  @db.Decimal(15, 2)
+  currency    String   @default("USD")
+  paymentDate DateTime
+
+  // Método de pago
+  paymentMethod   PaymentMethod
+  referenceNumber String?
+
+  // Clasificación
+  paymentType PaymentType
+  description String?
+
+  // Validación
+  verified         Boolean   @default(false)
+  verificationDate DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tax_payments")
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  CREDIT_CARD
+  DEBIT_CARD
+  CHECK
+  CASH
+  ELECTRONIC
+  OFFSET // Compensación
+}
+
+enum PaymentType {
+  TAX_PAYMENT // Pago de impuesto
+  PENALTY // Multa
+  INTEREST // Intereses
+  INSTALLMENT // Cuota
+  ADVANCE // Anticipo
+  REFUND // Devolución
+}
+
+// Ajustes y Correcciones
+model TaxAdjustment {
+  id String @id @default(cuid())
+
+  taxReturnId String
+  taxReturn   TaxReturn @relation(fields: [taxReturnId], references: [id], onDelete: Cascade)
+
+  // Detalles del ajuste
+  adjustmentType AdjustmentType
+  reason         String
+
+  // Montos
+  originalAmount Decimal @db.Decimal(15, 2)
+  adjustedAmount Decimal @db.Decimal(15, 2)
+  difference     Decimal @db.Decimal(15, 2)
+
+  // Fechas
+  adjustmentDate DateTime
+  effectiveDate  DateTime?
+
+  // Aprobación
+  approvedBy String?
+  approvedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@map("tax_adjustments")
+}
+
+enum AdjustmentType {
+  CORRECTION // Corrección
+  AMENDMENT // Enmienda
+  REASSESSMENT // Reevaluación
+  PENALTY_WAIVER // Condonación de multa
+  INTEREST_WAIVER // Condonación de intereses
+}
+
+// Certificados Tributarios
+model TaxCertificate {
+  id String @id @default(cuid())
+
+  taxEntityId String
+  taxEntity   TaxEntity @relation(fields: [taxEntityId], references: [id], onDelete: Cascade)
+
+  // Información del certificado
+  certificateType   CertificateType
+  certificateNumber String          @unique
+  title             String
+  description       String?
+
+  // Validez
+  issuedDate     DateTime
+  expirationDate DateTime?
+
+  // Estado
+  status CertificateStatus @default(ACTIVE)
+
+  // Documento
+  documentUrl      String?
+  digitalSignature String?
+
+  // Metadatos
+  issuedBy         String? // Autoridad emisora
+  verificationCode String? // Código de verificación
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tax_certificates")
+}
+
+enum CertificateType {
+  TAX_COMPLIANCE // Certificado de Cumplimiento
+  NO_DEBT // Certificado de No Adeudo
+  GOOD_STANDING // Certificado de Buena Conducta Fiscal
+  WITHHOLDING_AGENT // Agente de Retención
+  TAX_RESIDENCE // Residencia Fiscal
+  EXEMPT_STATUS // Estado de Exención
+  REGISTRATION // Certificado de Registro
+}
+
+enum CertificateStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+  SUSPENDED
+  PENDING_RENEWAL
+}
+
+// Procesos de Auditoría
+model AuditProcess {
+  id String @id @default(cuid())
+
+  taxEntityId String
+  taxEntity   TaxEntity @relation(fields: [taxEntityId], references: [id], onDelete: Cascade)
+
+  taxReturnId String?
+  taxReturn   TaxReturn? @relation(fields: [taxReturnId], references: [id], onDelete: SetNull)
+
+  // Información de la auditoría
+  auditNumber String    @unique
+  auditType   AuditType
+  scope       String // Alcance de la auditoría
+
+  // Fechas
+  startDate        DateTime
+  endDate          DateTime?
+  notificationDate DateTime?
+
+  // Estado
+  status AuditStatus @default(INITIATED)
+
+  // Personal asignado
+  auditor String? // Auditor principal
+  team    Json? // Equipo de auditores
+
+  // Resultados
+  findings        String? // Hallazgos
+  recommendations String? // Recomendaciones
+
+  // Montos
+  additionalTax Decimal? @db.Decimal(15, 2)
+  penalties     Decimal? @db.Decimal(15, 2)
+  interest      Decimal? @db.Decimal(15, 2)
+
+  // Documentos
+  documents   Json? // URLs de documentos
+  finalReport String? // URL del reporte final
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("audit_processes")
+}
+
+enum AuditType {
+  DESK_AUDIT // Auditoría de escritorio
+  FIELD_AUDIT // Auditoría de campo
+  CORRESPONDENCE // Auditoría por correspondencia
+  RANDOM // Auditoría aleatoria
+  TARGETED // Auditoría dirigida
+  FOLLOW_UP // Auditoría de seguimiento
+}
+
+enum AuditStatus {
+  INITIATED // Iniciada
+  IN_PROGRESS // En progreso
+  PENDING_RESPONSE // Pendiente de respuesta
+  UNDER_REVIEW // En revisión
+  COMPLETED // Completada
+  APPEALED // Apelada
+  CLOSED // Cerrada
+}
