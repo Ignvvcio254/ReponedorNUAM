@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { SessionProvider } from '@/components/providers/SessionProvider'
+import { ToastProvider } from '@/components/ui/ToastContainer'
 import { Header } from '@/components/layout/Header'
 import './globals.css'
 
@@ -20,12 +21,14 @@ export default function RootLayout({
     <html lang="es">
       <body className={inter.className}>
         <SessionProvider>
-          <div className="min-h-screen bg-gray-50">
-            <Header />
-            <main>
-              {children}
-            </main>
-          </div>
+          <ToastProvider>
+            <div className="min-h-screen bg-gray-50">
+              <Header />
+              <main>
+                {children}
+              </main>
+            </div>
+          </ToastProvider>
         </SessionProvider>
       </body>
     </html>

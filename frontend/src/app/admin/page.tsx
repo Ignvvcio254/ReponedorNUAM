@@ -24,6 +24,7 @@ import { EditUserModal } from '@/components/admin/EditUserModal'
 import { ChangeRoleModal } from '@/components/admin/ChangeRoleModal'
 import { ResetPasswordModal } from '@/components/admin/ResetPasswordModal'
 import { DeleteUserModal } from '@/components/admin/DeleteUserModal'
+import { useToast } from '@/components/ui/ToastContainer'
 
 interface UserStats {
   total: number
@@ -41,6 +42,7 @@ interface UserStats {
 export default function AdminPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const toast = useToast()
 
   // State management
   const [users, setUsers] = useState<User[]>([])
@@ -136,15 +138,15 @@ export default function AdminPage() {
       const data = await response.json()
 
       if (data.success) {
-        alert('✅ Usuario creado exitosamente')
+        toast.success('Usuario creado exitosamente')
         setShowCreateModal(false)
         setCreateFormData({ name: '', email: '', password: '', role: 'ACCOUNTANT' })
         loadData()
       } else {
-        alert('❌ Error: ' + data.error)
+        toast.error('Error: ' + data.error)
       }
     } catch (error) {
-      alert('❌ Error al crear usuario')
+      toast.error('Error al crear usuario')
     } finally {
       setCreateLoading(false)
     }
@@ -161,7 +163,7 @@ export default function AdminPage() {
     const result = await response.json()
 
     if (result.success) {
-      alert('✅ Usuario actualizado exitosamente')
+      toast.success('Usuario actualizado exitosamente')
       loadData()
     } else {
       throw new Error(result.error)
@@ -179,7 +181,7 @@ export default function AdminPage() {
     const result = await response.json()
 
     if (result.success) {
-      alert('✅ Rol cambiado exitosamente')
+      toast.success('Rol cambiado exitosamente')
       loadData()
     } else {
       throw new Error(result.error)
@@ -195,10 +197,10 @@ export default function AdminPage() {
     const result = await response.json()
 
     if (result.success) {
-      alert('✅ Estado actualizado exitosamente')
+      toast.success('Estado actualizado exitosamente')
       loadData()
     } else {
-      alert('❌ Error: ' + result.error)
+      toast.error('Error: ' + result.error)
     }
   }
 
@@ -213,7 +215,7 @@ export default function AdminPage() {
     const result = await response.json()
 
     if (result.success) {
-      alert('✅ Contraseña restablecida exitosamente')
+      toast.success('Contraseña restablecida exitosamente')
       loadData()
     } else {
       throw new Error(result.error)
@@ -228,7 +230,7 @@ export default function AdminPage() {
     const result = await response.json()
 
     if (result.success) {
-      alert(`✅ Usuario ${permanent ? 'eliminado permanentemente' : 'desactivado'} exitosamente`)
+      toast.success(`Usuario ${permanent ? 'eliminado permanentemente' : 'desactivado'} exitosamente`)
       loadData()
     } else {
       throw new Error(result.error)
@@ -248,8 +250,9 @@ export default function AdminPage() {
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
+      toast.success('Audit logs exportados exitosamente')
     } catch (error) {
-      alert('❌ Error al exportar logs')
+      toast.error('Error al exportar logs')
     }
   }
 
