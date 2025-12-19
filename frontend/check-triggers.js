@@ -1,7 +1,3 @@
-/**
- * Check database triggers
- */
-
 require('dotenv').config();
 const { Client } = require('pg');
 
@@ -12,24 +8,32 @@ async function checkTriggers() {
 
   try {
     await client.connect();
+    console.log('Checking triggers on public.users');
 
-    const result = await client.query(`
+    const triggers = await client.query(`
       SELECT trigger_name, event_manipulation, action_statement
       FROM information_schema.triggers
-      WHERE event_object_table = 'users'
+      WHERE event_object_schema = 'public'
+      AND event_object_table = 'users'
+      ORDER BY trigger_name;
     `);
 
-    console.log('Triggers on users table:');
-    console.log('========================\n');
-    result.rows.forEach(row => {
-      console.log('Trigger:', row.trigger_name);
-      console.log('Event:', row.event_manipulation);
-      console.log('Action:', row.action_statement);
-      console.log('---');
-    });
+    console.log('Triggers found:', triggers.rows.length);
+    triggers.rows.forEach(t => console.log(t));
+
+    const funcDef = await client.query(`
+      SELECT pg_get_functiondef(oid) as definition
+      FROM pg_proc
+      WHERE proname = 'update_updated_at_column';
+    `);
+
+    if (funcDef.rows.length > 0) {
+      console.log('Function definition:');
+      console.log(funcDef.rows[0].definition);
+    }
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error:', error.message);
   } finally {
     await client.end();
   }
