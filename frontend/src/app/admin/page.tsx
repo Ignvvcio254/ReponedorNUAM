@@ -1,32 +1,77 @@
+/**
+ * Admin Panel - Professional User Management
+ * Complete admin dashboard with full CRUD operations and advanced features
+ */
+
 'use client'
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import {
-  UserGroupIcon,
   ShieldCheckIcon,
   ClockIcon,
-  ChartBarIcon,
+  PlusIcon,
   ArrowPathIcon,
+  FunnelIcon,
+  ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline'
+
+// Import custom components
+import { UserTable, type User } from '@/components/admin/UserTable'
+import { AdminStats } from '@/components/admin/AdminStats'
+import { EditUserModal } from '@/components/admin/EditUserModal'
+import { ChangeRoleModal } from '@/components/admin/ChangeRoleModal'
+import { ResetPasswordModal } from '@/components/admin/ResetPasswordModal'
+import { DeleteUserModal } from '@/components/admin/DeleteUserModal'
+
+interface UserStats {
+  total: number
+  active: number
+  inactive: number
+  byRole: Array<{ role: string; count: number }>
+  recentLogins: Array<{
+    id: string
+    name: string
+    email: string
+    lastLoginAt: string
+  }>
+}
 
 export default function AdminPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
-  const [users, setUsers] = useState<any[]>([])
+
+  // State management
+  const [users, setUsers] = useState<User[]>([])
+  const [userStats, setUserStats] = useState<UserStats | null>(null)
   const [auditLogs, setAuditLogs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'users' | 'audit' | 'settings'>('users')
+
+  // Modals state
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showChangeRoleModal, setShowChangeRoleModal] = useState(false)
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+
+  // Filters
+  const [searchQuery, setSearchQuery] = useState('')
+  const [roleFilter, setRoleFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+
+  // Create user form
   const [createLoading, setCreateLoading] = useState(false)
-  const [formData, setFormData] = useState({
+  const [createFormData, setCreateFormData] = useState({
     name: '',
     email: '',
     password: '',
     role: 'ACCOUNTANT',
   })
 
+  // Auth check
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login')
@@ -35,51 +80,48 @@ export default function AdminPage() {
     }
   }, [status, session, router])
 
+  // Load initial data
   useEffect(() => {
     if (status === 'authenticated' && session?.user.role === 'ADMIN') {
       loadData()
     }
   }, [status, session])
 
+  // Load all data
   const loadData = async () => {
     setLoading(true)
     try {
-      const [usersRes, auditRes] = await Promise.all([
+      const [usersRes, statsRes, auditRes] = await Promise.all([
         fetch('/api/users'),
+        fetch('/api/users/stats'),
         fetch('/api/audit-logs?limit=50'),
       ])
 
-      console.log('Users response status:', usersRes.status)
-      console.log('Audit response status:', auditRes.status)
-
-      const usersData = await usersRes.json()
-      const auditData = await auditRes.json()
-
-      console.log('Users data:', usersData)
-      console.log('Audit data:', auditData)
+      const [usersData, statsData, auditData] = await Promise.all([
+        usersRes.json(),
+        statsRes.json(),
+        auditRes.json(),
+      ])
 
       if (usersData.success && Array.isArray(usersData.data)) {
-        console.log('Setting users:', usersData.data)
         setUsers(usersData.data)
-      } else {
-        console.log('Users data not valid, setting empty array')
-        setUsers([])
+      }
+
+      if (statsData.success) {
+        setUserStats(statsData.data)
       }
 
       if (auditData.success && Array.isArray(auditData.data)) {
         setAuditLogs(auditData.data)
-      } else {
-        setAuditLogs([])
       }
     } catch (error) {
       console.error('Error loading admin data:', error)
-      setUsers([])
-      setAuditLogs([])
     } finally {
       setLoading(false)
     }
   }
 
+  // Create user handler
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault()
     setCreateLoading(true)
@@ -87,35 +129,147 @@ export default function AdminPage() {
     try {
       const response = await fetch('/api/users', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(createFormData),
       })
 
       const data = await response.json()
 
       if (data.success) {
-        alert('Usuario creado exitosamente')
+        alert('✅ Usuario creado exitosamente')
         setShowCreateModal(false)
-        setFormData({
-          name: '',
-          email: '',
-          password: '',
-          role: 'ACCOUNTANT',
-        })
-        loadData() // Recargar la lista de usuarios
+        setCreateFormData({ name: '', email: '', password: '', role: 'ACCOUNTANT' })
+        loadData()
       } else {
-        alert('Error al crear usuario: ' + data.error)
+        alert('❌ Error: ' + data.error)
       }
     } catch (error) {
-      console.error('Error creating user:', error)
-      alert('Error al crear usuario')
+      alert('❌ Error al crear usuario')
     } finally {
       setCreateLoading(false)
     }
   }
 
+  // Edit user handler
+  const handleEditUser = async (userId: string, data: any) => {
+    const response = await fetch(`/api/users/${userId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+
+    const result = await response.json()
+
+    if (result.success) {
+      alert('✅ Usuario actualizado exitosamente')
+      loadData()
+    } else {
+      throw new Error(result.error)
+    }
+  }
+
+  // Change role handler
+  const handleChangeRole = async (userId: string, newRole: string) => {
+    const response = await fetch(`/api/users/${userId}/change-role`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: newRole }),
+    })
+
+    const result = await response.json()
+
+    if (result.success) {
+      alert('✅ Rol cambiado exitosamente')
+      loadData()
+    } else {
+      throw new Error(result.error)
+    }
+  }
+
+  // Toggle status handler
+  const handleToggleStatus = async (userId: string) => {
+    const response = await fetch(`/api/users/${userId}/toggle-status`, {
+      method: 'POST',
+    })
+
+    const result = await response.json()
+
+    if (result.success) {
+      alert('✅ Estado actualizado exitosamente')
+      loadData()
+    } else {
+      alert('❌ Error: ' + result.error)
+    }
+  }
+
+  // Reset password handler
+  const handleResetPassword = async (userId: string, newPassword: string) => {
+    const response = await fetch(`/api/users/${userId}/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newPassword }),
+    })
+
+    const result = await response.json()
+
+    if (result.success) {
+      alert('✅ Contraseña restablecida exitosamente')
+      loadData()
+    } else {
+      throw new Error(result.error)
+    }
+  }
+
+  // Delete user handler
+  const handleDeleteUser = async (userId: string, permanent: boolean) => {
+    const url = `/api/users/${userId}${permanent ? '?permanent=true' : ''}`
+    const response = await fetch(url, { method: 'DELETE' })
+
+    const result = await response.json()
+
+    if (result.success) {
+      alert(`✅ Usuario ${permanent ? 'eliminado permanentemente' : 'desactivado'} exitosamente`)
+      loadData()
+    } else {
+      throw new Error(result.error)
+    }
+  }
+
+  // Export audit logs
+  const handleExportAuditLogs = async () => {
+    try {
+      const response = await fetch('/api/audit-logs/export')
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `audit-logs-${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      alert('❌ Error al exportar logs')
+    }
+  }
+
+  // Filter users
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch =
+      searchQuery === '' ||
+      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+
+    const matchesRole = roleFilter === 'all' || user.role === roleFilter
+    const matchesStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'active' && user.isActive) ||
+      (statusFilter === 'inactive' && !user.isActive)
+
+    return matchesSearch && matchesRole && matchesStatus
+  })
+
+  // Loading state
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -127,6 +281,7 @@ export default function AdminPage() {
     )
   }
 
+  // Auth check
   if (session?.user.role !== 'ADMIN') {
     return null
   }
@@ -153,53 +308,17 @@ export default function AdminPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+          <div className="flex items-center gap-3 mb-2">
             <ShieldCheckIcon className="w-10 h-10 text-nuam-600" />
-            Panel de Administración
-          </h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Gestión de usuarios y auditoría del sistema
+            <h1 className="text-3xl font-bold text-gray-900">Panel de Administración</h1>
+          </div>
+          <p className="text-sm text-gray-600">
+            Gestión completa de usuarios, roles, permisos y auditoría del sistema
           </p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Usuarios Totales</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">
-                  {(users?.length || 0).toLocaleString()}
-                </p>
-              </div>
-              <UserGroupIcon className="w-12 h-12 text-nuam-500" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Usuarios Activos</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">
-                  {(Array.isArray(users) ? users.filter(u => u.isActive).length : 0).toLocaleString()}
-                </p>
-              </div>
-              <ShieldCheckIcon className="w-12 h-12 text-green-500" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Eventos de Auditoría</p>
-                <p className="text-2xl font-bold text-gray-900 mt-2">
-                  {(auditLogs?.length || 0).toLocaleString()}
-                </p>
-              </div>
-              <ClockIcon className="w-12 h-12 text-blue-500" />
-            </div>
-          </div>
-        </div>
+        {/* Stats Dashboard */}
+        <AdminStats stats={userStats} auditCount={auditLogs.length} />
 
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow mb-6">
@@ -213,8 +332,7 @@ export default function AdminPage() {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <UserGroupIcon className="w-5 h-5 inline-block mr-2" />
-                Usuarios
+                Gestión de Usuarios ({users.length})
               </button>
               <button
                 onClick={() => setActiveTab('audit')}
@@ -224,8 +342,7 @@ export default function AdminPage() {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <ClockIcon className="w-5 h-5 inline-block mr-2" />
-                Auditoría
+                Auditoría ({auditLogs.length})
               </button>
               <button
                 onClick={() => setActiveTab('settings')}
@@ -235,7 +352,6 @@ export default function AdminPage() {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <ChartBarIcon className="w-5 h-5 inline-block mr-2" />
                 Configuración
               </button>
             </nav>
@@ -243,100 +359,116 @@ export default function AdminPage() {
 
           {/* Tab Content */}
           <div className="p-6">
+            {/* Users Tab */}
             {activeTab === 'users' && (
               <div>
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    Gestión de Usuarios
-                  </h2>
+                {/* Filters and Actions */}
+                <div className="flex flex-col md:flex-row gap-4 mb-6">
+                  {/* Search */}
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      placeholder="Buscar por nombre o email..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nuam-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Role Filter */}
+                  <select
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nuam-500 focus:border-transparent"
+                  >
+                    <option value="all">Todos los roles</option>
+                    <option value="ADMIN">Admin</option>
+                    <option value="MANAGER">Manager</option>
+                    <option value="ACCOUNTANT">Accountant</option>
+                    <option value="AUDITOR">Auditor</option>
+                    <option value="VIEWER">Viewer</option>
+                  </select>
+
+                  {/* Status Filter */}
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nuam-500 focus:border-transparent"
+                  >
+                    <option value="all">Todos los estados</option>
+                    <option value="active">Activos</option>
+                    <option value="inactive">Inactivos</option>
+                  </select>
+
+                  {/* Create Button */}
                   <button
                     onClick={() => setShowCreateModal(true)}
-                    className="px-4 py-2 bg-nuam-600 text-white rounded-lg hover:bg-nuam-700 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-nuam-600 text-white rounded-lg hover:bg-nuam-700 transition-colors whitespace-nowrap"
                   >
+                    <PlusIcon className="w-5 h-5" />
                     Crear Usuario
+                  </button>
+
+                  {/* Refresh Button */}
+                  <button
+                    onClick={loadData}
+                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    title="Recargar datos"
+                  >
+                    <ArrowPathIcon className="w-5 h-5" />
                   </button>
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Usuario
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Email
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Rol
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Estado
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Último Login
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {users && users.length > 0 ? users.map((user) => (
-                        <tr key={user.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="w-10 h-10 bg-nuam-600 rounded-full flex items-center justify-center">
-                                <span className="text-white font-medium">
-                                  {user.name?.charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                              <div className="ml-4">
-                                <div className="text-sm font-medium text-gray-900">
-                                  {user.name}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {user.email}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${roleColors[user.role] || 'bg-gray-100 text-gray-800'}`}>
-                              {user.role}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                            }`}>
-                              {user.isActive ? 'Activo' : 'Inactivo'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {user.lastLoginAt
-                              ? new Date(user.lastLoginAt).toLocaleString('es-ES')
-                              : 'Nunca'}
-                          </td>
-                        </tr>
-                      )) : (
-                        <tr>
-                          <td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500">
-                            No hay usuarios para mostrar
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                {/* Results Info */}
+                <div className="mb-4 text-sm text-gray-600">
+                  Mostrando {filteredUsers.length} de {users.length} usuarios
                 </div>
+
+                {/* Users Table */}
+                <UserTable
+                  users={filteredUsers}
+                  currentUserId={session.user.id}
+                  onEdit={(user) => {
+                    setSelectedUser(user)
+                    setShowEditModal(true)
+                  }}
+                  onDelete={(userId) => {
+                    const user = users.find((u) => u.id === userId)
+                    if (user) {
+                      setSelectedUser(user)
+                      setShowDeleteModal(true)
+                    }
+                  }}
+                  onToggleStatus={handleToggleStatus}
+                  onChangeRole={(userId) => {
+                    const user = users.find((u) => u.id === userId)
+                    if (user) {
+                      setSelectedUser(user)
+                      setShowChangeRoleModal(true)
+                    }
+                  }}
+                />
               </div>
             )}
 
+            {/* Audit Tab */}
             {activeTab === 'audit' && (
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  Registro de Auditoría (Últimos 50 eventos)
-                </h2>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Registro de Auditoría (Últimos 50 eventos)
+                  </h2>
+                  <button
+                    onClick={handleExportAuditLogs}
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <ArrowDownTrayIcon className="w-5 h-5" />
+                    Exportar Logs
+                  </button>
+                </div>
 
                 <div className="space-y-4">
-                  {auditLogs && auditLogs.length > 0 ? auditLogs.map((log) => (
+                  {auditLogs.map((log) => (
                     <div
                       key={log.id}
                       className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
@@ -365,30 +497,30 @@ export default function AdminPage() {
                         </div>
                       </div>
                     </div>
-                  )) : (
-                    <div className="text-center py-12 text-gray-500">
-                      No hay eventos de auditoría para mostrar
-                    </div>
-                  )}
+                  ))}
                 </div>
               </div>
             )}
 
+            {/* Settings Tab */}
             {activeTab === 'settings' && (
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
                   Configuración del Sistema
                 </h2>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-blue-800">
-                    Panel de configuración en desarrollo. Próximamente podrás gestionar:
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <p className="text-blue-800 mb-4">
+                    Panel de configuración avanzada del sistema. Las siguientes funciones estarán disponibles próximamente:
                   </p>
-                  <ul className="mt-2 text-sm text-blue-700 list-disc list-inside">
-                    <li>Configuración de seguridad</li>
-                    <li>Límites de intentos de login</li>
-                    <li>Duración de sesiones</li>
-                    <li>Notificaciones por email</li>
-                    <li>Configuración de permisos</li>
+                  <ul className="space-y-2 text-sm text-blue-700 list-disc list-inside">
+                    <li>Configuración de políticas de seguridad</li>
+                    <li>Límites de intentos de login y bloqueos</li>
+                    <li>Duración y gestión de sesiones</li>
+                    <li>Configuración de notificaciones por email</li>
+                    <li>Gestión de permisos granulares</li>
+                    <li>Configuración de auditoría y retención de logs</li>
+                    <li>Integración con servicios externos</li>
+                    <li>Backups y restauración de datos</li>
                   </ul>
                 </div>
               </div>
@@ -396,92 +528,73 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Modal Crear Usuario */}
+        {/* Modals */}
         {showCreateModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
               <div className="p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Crear Nuevo Usuario
-                  </h3>
-                  <button
-                    onClick={() => setShowCreateModal(false)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                <form onSubmit={handleCreateUser}>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Nombre Completo
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nuam-500 focus:border-transparent"
-                        placeholder="Juan Pérez"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        required
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nuam-500 focus:border-transparent"
-                        placeholder="usuario@ejemplo.com"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Contraseña
-                      </label>
-                      <input
-                        type="password"
-                        required
-                        minLength={8}
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nuam-500 focus:border-transparent"
-                        placeholder="Mínimo 8 caracteres"
-                      />
-                      <p className="mt-1 text-xs text-gray-500">
-                        La contraseña debe tener al menos 8 caracteres
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Rol
-                      </label>
-                      <select
-                        value={formData.role}
-                        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nuam-500 focus:border-transparent"
-                      >
-                        <option value="VIEWER">Viewer - Solo lectura limitada</option>
-                        <option value="AUDITOR">Auditor - Lectura + logs de auditoría</option>
-                        <option value="ACCOUNTANT">Contador - CRUD de calificaciones</option>
-                        <option value="MANAGER">Manager - Aprobaciones + gestión</option>
-                        <option value="ADMIN">Admin - Acceso completo</option>
-                      </select>
-                    </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Crear Nuevo Usuario
+                </h3>
+                <form onSubmit={handleCreateUser} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nombre Completo
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={createFormData.name}
+                      onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nuam-500 focus:border-transparent"
+                    />
                   </div>
 
-                  <div className="mt-6 flex gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={createFormData.email}
+                      onChange={(e) => setCreateFormData({ ...createFormData, email: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nuam-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Contraseña
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      minLength={8}
+                      value={createFormData.password}
+                      onChange={(e) => setCreateFormData({ ...createFormData, password: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nuam-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Rol
+                    </label>
+                    <select
+                      value={createFormData.role}
+                      onChange={(e) => setCreateFormData({ ...createFormData, role: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nuam-500 focus:border-transparent"
+                    >
+                      <option value="VIEWER">Viewer</option>
+                      <option value="AUDITOR">Auditor</option>
+                      <option value="ACCOUNTANT">Contador</option>
+                      <option value="MANAGER">Manager</option>
+                      <option value="ADMIN">Admin</option>
+                    </select>
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
                     <button
                       type="button"
                       onClick={() => setShowCreateModal(false)}
@@ -492,7 +605,7 @@ export default function AdminPage() {
                     <button
                       type="submit"
                       disabled={createLoading}
-                      className="flex-1 px-4 py-2 bg-nuam-600 text-white rounded-lg hover:bg-nuam-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 px-4 py-2 bg-nuam-600 text-white rounded-lg hover:bg-nuam-700 transition-colors disabled:opacity-50"
                     >
                       {createLoading ? 'Creando...' : 'Crear Usuario'}
                     </button>
@@ -501,6 +614,50 @@ export default function AdminPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {selectedUser && (
+          <>
+            <EditUserModal
+              user={selectedUser}
+              isOpen={showEditModal}
+              onClose={() => {
+                setShowEditModal(false)
+                setSelectedUser(null)
+              }}
+              onSave={handleEditUser}
+            />
+
+            <ChangeRoleModal
+              user={selectedUser}
+              isOpen={showChangeRoleModal}
+              onClose={() => {
+                setShowChangeRoleModal(false)
+                setSelectedUser(null)
+              }}
+              onSave={handleChangeRole}
+            />
+
+            <ResetPasswordModal
+              user={selectedUser}
+              isOpen={showResetPasswordModal}
+              onClose={() => {
+                setShowResetPasswordModal(false)
+                setSelectedUser(null)
+              }}
+              onReset={handleResetPassword}
+            />
+
+            <DeleteUserModal
+              user={selectedUser}
+              isOpen={showDeleteModal}
+              onClose={() => {
+                setShowDeleteModal(false)
+                setSelectedUser(null)
+              }}
+              onDelete={handleDeleteUser}
+            />
+          </>
         )}
       </div>
     </div>
