@@ -2995,3 +2995,2543 @@ Analizar archivos SQL y su relevancia
 Revisar archivos de documentación duplicados
 
 Crear recomendaciones de limpieza
+
+
+
+
+This session is being continued from a previous conversation that ran out of context. The conversation is summarized below:
+Analysis:
+Let me chronologically analyze this conversation about implementing authentication for the NUAM Tax Container System:
+
+**Session Context:**
+This conversation continues from a previous session where Phase 2 Security Implementation was in progress. The initial context showed TypeScript types and RBAC permissions were already created.
+
+**Chronological Flow:**
+
+1. **Initial Problem**: User shared Vercel build errors preventing deployment
+   - Error 1: NextAuth route.ts exporting authOptions (not allowed in Next.js API routes)
+   - Error 2: Users API missing password field
+   - Error 3: AuditLog using wrong field name (details vs newValues)
+   - Error 4: UserRole import from wrong path
+   - Error 5: useSearchParams needing Suspense boundary
+
+2. **Fixes Applied**: I fixed all TypeScript build errors
+   - Created separate `/lib/auth-options.ts` for NextAuth configuration
+   - Updated users API with password hashing (bcryptjs)
+   - Changed `details` to `newValues` in audit logs
+   - Fixed UserRole imports to use `../../generated/prisma`
+   - Wrapped login page in Suspense boundary
+
+3. **Runtime Error**: After successful build, 500 error on `/api/auth/session`
+   - Root cause: Missing `emailVerified` column in database
+   - Database schema was outdated, missing all auth fields
+
+4. **Database Migration Challenge**: Prisma db push hung with connection pooler
+   - Issue: Supabase pgbouncer (port 6543) doesn't support Prisma migrations
+   - Direct connection (port 5432) not accessible externally
+   - Solution: Created SQL migration script and ran it directly using node-postgres
+
+5. **Database Update Success**: I executed migration via custom Node.js script
+   - Created `run-migration.js` using pg client
+   - Successfully added all auth fields to users table
+   - Created NextAuth tables (accounts, sessions, verification_tokens)
+
+6. **Admin User Setup**: Password was plaintext "changeme" from migration default
+   - Created `update-admin-password.js` script
+   - Had to disable/re-enable database trigger to avoid conflicts
+   - Successfully set bcrypt hash for password "Admin123!NUAM"
+
+7. **Deployment**: User noted no redeploy happened
+   - I pushed changes to GitHub to trigger Vercel deployment
+
+8. **Reports Page Error**: User reported error in /reportes and /admin
+   - Error: `Cannot read properties of undefined (reading 'toLocaleString')`
+   - Fixed by adding null safety checks and default values
+   - Created ReportsContent.tsx component wrapped in Suspense
+
+9. **Admin Panel Creation**: User wanted admin panel access
+   - Created `/admin/page.tsx` with user management and audit logs
+   - Added dynamic navigation link only for ADMIN role
+   - Created `/api/audit-logs` endpoint
+
+10. **Filter Error in Admin**: `m.filter is not a function`
+    - Problem: users wasn't guaranteed to be an array
+    - Added Array.isArray() validation in loadData()
+    - Added check before calling .filter()
+
+11. **Create User Functionality**: User clicked "Crear Usuario" but nothing happened
+    - Added modal form with all fields (name, email, password, role)
+    - Implemented handleCreateUser function
+    - Connected to POST /api/users endpoint
+    - Added validation and feedback
+
+12. **Current Issue**: 500 error when creating user
+    - User tried to create "Vicente Garcia" with email "vgracia04@gmail.com"
+    - Server returned 500 Internal Server Error
+    - Need to investigate the actual error in the API
+
+**Key Technical Patterns:**
+- JWT-based authentication with NextAuth.js
+- Prisma ORM with custom client path
+- RBAC with 5 roles
+- Direct SQL migrations for pooled connections
+- Error handling with try-catch for audit logging
+- Suspense boundaries for client-side hooks
+- Array validation before operations
+
+**User's Intent:**
+The user wants a fully functional authentication system with admin panel that can create users. Currently stuck on 500 error when creating users.
+
+Summary:
+## 1. Primary Request and Intent
+
+The user's primary intent was to complete Phase 2 Security Implementation for the NUAM Tax Container System, which involved:
+- Fixing all Vercel build errors preventing deployment
+- Getting NextAuth.js authentication working in production
+- Updating the production database schema to support authentication
+- Creating a functional admin panel with user management
+- Enabling the ability to create new users through the admin interface
+
+The user has been actively debugging deployment issues and providing error logs, screenshots, and feedback throughout the process.
+
+## 2. Key Technical Concepts
+
+- **NextAuth.js 4.24.13**: JWT-based authentication with credentials provider
+- **Next.js 14.2.32**: App Router with React Server Components and API routes
+- **Prisma 6.15.0**: ORM with PostgreSQL, custom client path at `generated/prisma`
+- **Supabase PostgreSQL**: Connection pooling with pgbouncer on port 6543, direct connection on port 5432
+- **bcryptjs**: Password hashing with 12 rounds
+- **RBAC (Role-Based Access Control)**: 5 user roles (ADMIN, MANAGER, ACCOUNTANT, AUDITOR, VIEWER)
+- **Vercel Deployment**: Serverless functions with automatic deployment from GitHub
+- **TypeScript 5.3.2**: Strict mode with custom type definitions
+- **node-postgres (pg)**: Direct PostgreSQL client for running migrations
+- **Suspense Boundaries**: Required for client-side hooks like useSearchParams and useSession
+- **Error Handling**: Try-catch blocks for non-critical operations (audit logging)
+
+## 3. Files and Code Sections
+
+### `/lib/auth-options.ts` (Created)
+**Purpose**: Separated NextAuth configuration from API route to comply with Next.js requirements
+
+**Key Changes**: Moved authOptions from route handler, added comprehensive error handling
+
+```typescript
+export const authOptions: NextAuthOptions = {
+  session: {
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  providers: [
+    CredentialsProvider({
+      async authorize(credentials, req) {
+        // Verify password with bcryptjs
+        const isPasswordValid = await compare(credentials.password, user.password)
+        
+        if (!isPasswordValid) {
+          await handleFailedLogin(user.id)
+          throw new Error('Invalid email or password')
+        }
+        
+        await handleSuccessfulLogin(user.id, ipAddress)
+        return user
+      },
+    }),
+  ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id
+        token.role = (user as AuthUser).role
+      }
+      return token
+    },
+  },
+}
+```
+
+### `/app/api/users/route.ts` (Modified)
+**Purpose**: Fixed missing password field error, added authentication checks
+
+**Key Changes**: 
+- Added bcryptjs password hashing
+- Added authentication requirement (admin only)
+- Added audit log creation
+- Changed default role to ACCOUNTANT
+
+```typescript
+import { hash } from 'bcryptjs'
+import { getCurrentUser } from '@/lib/auth'
+
+export async function POST(request: NextRequest) {
+  const currentUser = await getCurrentUser()
+  if (!currentUser || currentUser.role !== 'ADMIN') {
+    return createErrorResponse('Forbidden - Admin access required', 403)
+  }
+
+  const hashedPassword = await hash(body.password, 12)
+  
+  const newUser = await db.user.create({
+    data: {
+      email: body.email,
+      name: body.name,
+      password: hashedPassword,
+      role: (body.role as UserRole) || 'ACCOUNTANT',
+      isActive: true,
+    },
+  })
+}
+```
+
+### `/app/(public)/login/page.tsx` (Modified)
+**Purpose**: Fixed useSearchParams Suspense error
+
+**Key Changes**: Extracted LoginForm component and wrapped in Suspense
+
+```typescript
+import { Suspense } from 'react'
+
+function LoginForm() {
+  const searchParams = useSearchParams()
+  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard'
+  // ... form logic
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <LoginForm />
+    </Suspense>
+  )
+}
+```
+
+### `migration-add-auth-fields.sql` (Created)
+**Purpose**: SQL migration to add authentication fields to users table
+
+**Key Changes**: Adds all missing auth columns and NextAuth tables
+
+```sql
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS "emailVerified" TIMESTAMP(3),
+ADD COLUMN IF NOT EXISTS password TEXT NOT NULL DEFAULT 'changeme',
+ADD COLUMN IF NOT EXISTS "isActive" BOOLEAN NOT NULL DEFAULT true,
+-- ... more columns
+
+CREATE TABLE IF NOT EXISTS accounts (...);
+CREATE TABLE IF NOT EXISTS sessions (...);
+CREATE TABLE IF NOT EXISTS "verification_tokens" (...);
+```
+
+### `run-migration.js` (Created)
+**Purpose**: Execute SQL migration directly using node-postgres client
+
+**Importance**: Bypasses Prisma's limitations with connection pooling
+
+```javascript
+require('dotenv').config();
+const { Client } = require('pg');
+
+async function runMigration() {
+  const client = new Client({
+    connectionString: process.env.DATABASE_URL,
+  });
+
+  await client.connect();
+  const sql = fs.readFileSync('migration-add-auth-fields.sql', 'utf8');
+  await client.query(sql);
+  // Verify changes...
+}
+```
+
+### `update-admin-password.js` (Created)
+**Purpose**: Update admin user password to bcrypt hash
+
+**Key Implementation**: Disables trigger to avoid conflicts
+
+```javascript
+// Temporarily disable trigger
+await client.query('ALTER TABLE users DISABLE TRIGGER update_users_updatedat');
+
+// Update the admin user
+const result = await client.query(
+  `UPDATE users
+   SET password = $1, "isActive" = true, "emailVerified" = NOW()
+   WHERE email = $2`,
+  [hashedPassword, ADMIN_EMAIL]
+);
+
+// Re-enable trigger
+await client.query('ALTER TABLE users ENABLE TRIGGER update_users_updatedat');
+```
+
+### `/app/reports/ReportsContent.tsx` (Created)
+**Purpose**: Client component for reports page with proper authentication
+
+**Key Changes**: Wrapped in Suspense, added session checks, null safety
+
+```typescript
+export function ReportsContent() {
+  const { data: session, status } = useSession()
+  
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login')
+    }
+  }, [status, router])
+
+  // Stats with null safety
+  {(stats.totalQualifications || 0).toLocaleString()}
+  {(stats.byCountry?.length || 0)}
+}
+```
+
+### `/app/reports/page.tsx` (Modified)
+**Purpose**: Server component wrapper with Suspense
+
+```typescript
+export default function ReportsPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <ReportsContent />
+    </Suspense>
+  )
+}
+```
+
+### `/components/layout/Header.tsx` (Modified)
+**Purpose**: Dynamic navigation based on user role
+
+**Key Changes**: Added getNavigation function that adds Admin link for ADMIN users
+
+```typescript
+const getNavigation = (userRole?: string) => {
+  const baseNavigation = [
+    { name: 'Dashboard', href: '/dashboard' },
+    { name: 'Calificaciones', href: '/qualifications' },
+    { name: 'Entidades', href: '/tax-entities' },
+    { name: 'Importar', href: '/import' },
+    { name: 'Reportes', href: '/reports' },
+  ]
+
+  if (userRole === 'ADMIN') {
+    return [...baseNavigation, { name: 'Admin', href: '/admin' }]
+  }
+
+  return baseNavigation
+}
+```
+
+### `/app/admin/page.tsx` (Created)
+**Purpose**: Complete admin panel with user management and audit logs
+
+**Key Features**: 
+- User list with role badges and status
+- Audit log viewer (last 50 events)
+- Create user modal with form validation
+- Stats dashboard
+
+**Create User Modal Implementation**:
+```typescript
+const [showCreateModal, setShowCreateModal] = useState(false)
+const [createLoading, setCreateLoading] = useState(false)
+const [formData, setFormData] = useState({
+  name: '',
+  email: '',
+  password: '',
+  role: 'ACCOUNTANT',
+})
+
+const handleCreateUser = async (e: React.FormEvent) => {
+  e.preventDefault()
+  setCreateLoading(true)
+
+  try {
+    const response = await fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData),
+    })
+
+    const data = await response.json()
+
+    if (data.success) {
+      alert('Usuario creado exitosamente')
+      setShowCreateModal(false)
+      setFormData({ name: '', email: '', password: '', role: 'ACCOUNTANT' })
+      loadData() // Refresh user list
+    } else {
+      alert('Error al crear usuario: ' + data.error)
+    }
+  } catch (error) {
+    console.error('Error creating user:', error)
+    alert('Error al crear usuario')
+  } finally {
+    setCreateLoading(false)
+  }
+}
+```
+
+**Array Validation Fix**:
+```typescript
+const loadData = async () => {
+  const usersData = await usersRes.json()
+  const auditData = await auditRes.json()
+
+  if (usersData.success && Array.isArray(usersData.data)) {
+    setUsers(usersData.data)
+  } else {
+    setUsers([])
+  }
+
+  if (auditData.success && Array.isArray(auditData.data)) {
+    setAuditLogs(auditData.data)
+  } else {
+    setAuditLogs([])
+  }
+}
+
+// Usage
+{(Array.isArray(users) ? users.filter(u => u.isActive).length : 0).toLocaleString()}
+```
+
+### `/app/api/audit-logs/route.ts` (Created)
+**Purpose**: API endpoint for fetching audit logs (admin only)
+
+```typescript
+export async function GET(request: NextRequest) {
+  await requirePermission('users', 'delete') // Only admins
+
+  const auditLogs = await db.auditLog.findMany({
+    where: whereClause,
+    include: {
+      user: {
+        select: { id: true, name: true, email: true, role: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+  })
+
+  return createSuccessResponse({ data: auditLogs, total: auditLogs.length })
+}
+```
+
+### `frontend/.env` (Created locally)
+**Purpose**: Local environment configuration for database access
+
+```bash
+DATABASE_URL="postgresql://postgres.epoytibyizkyjncbtlew:Elignaciopro250426.@aws-1-us-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+```
+
+## 4. Errors and Fixes
+
+### Error 1: NextAuth Route Export
+**Error**: `"authOptions" is not a valid Route export field`
+**Location**: `/app/api/auth/[...nextauth]/route.ts`
+**Fix**: Created separate `/lib/auth-options.ts` file and imported authOptions
+**Status**: ✅ Fixed
+
+### Error 2: Missing Password Field
+**Error**: `Property 'password' is missing in type {...} but required in type 'UserCreateInput'`
+**Location**: `/app/api/users/route.ts` line 80
+**Fix**: Added password hashing with bcryptjs and included all required fields
+**Status**: ✅ Fixed
+
+### Error 3: Wrong AuditLog Field Name
+**Error**: `'details' does not exist in type 'AuditLogCreateInput'`
+**Locations**: Multiple files (users/route.ts, auth-options.ts)
+**Fix**: Changed all `details:` to `newValues:` to match Prisma schema
+**Status**: ✅ Fixed
+
+### Error 4: Wrong UserRole Import Path
+**Error**: `Module '"@prisma/client"' has no exported member 'UserRole'`
+**Locations**: auth.ts, permissions.ts, types/auth.ts
+**Fix**: Changed imports from `'@prisma/client'` to `'../../generated/prisma'`
+**Reason**: Project uses custom Prisma client location
+**Status**: ✅ Fixed
+
+### Error 5: useSearchParams Suspense Boundary
+**Error**: `useSearchParams() should be wrapped in a suspense boundary at page "/login"`
+**Location**: `/app/(public)/login/page.tsx`
+**Fix**: Extracted LoginForm component and wrapped in Suspense with loading fallback
+**Status**: ✅ Fixed
+
+### Error 6: Missing Database Columns (Runtime)
+**Error**: `The column users.emailVerified does not exist in the current database`
+**Location**: Production database on Supabase
+**Root Cause**: Database schema outdated - missing authentication fields
+**Fix**: Created and executed SQL migration directly using node-postgres
+**Status**: ✅ Fixed
+
+### Error 7: Prisma db push Hanging
+**Error**: Command hung indefinitely when connecting to database
+**Root Cause**: Supabase pgbouncer (port 6543) doesn't support Prisma migrations
+**Attempted Fix 1**: Try direct connection (port 5432) - **Failed** (connection refused)
+**Successful Fix**: Created custom Node.js script using pg client to run SQL migration directly
+**Status**: ✅ Fixed
+
+### Error 8: Admin Password Plaintext
+**Error**: Admin user had password "changeme" instead of bcrypt hash
+**Root Cause**: Migration SQL set default value as plaintext
+**Fix**: Created `update-admin-password.js` script that:
+  - Disables database trigger temporarily
+  - Updates password with bcrypt hash
+  - Re-enables trigger
+**Status**: ✅ Fixed
+
+### Error 9: toLocaleString on Undefined
+**Error**: `TypeError: Cannot read properties of undefined (reading 'toLocaleString')`
+**Location**: /reports and /admin pages
+**Root Cause**: Stats data could be undefined
+**Fix**: Added null safety checks and default values
+```typescript
+{(stats.totalQualifications || 0).toLocaleString()}
+{(stats.byCountry?.length || 0)}
+```
+**Status**: ✅ Fixed
+
+### Error 10: filter is not a function
+**Error**: `TypeError: m.filter is not a function`
+**Location**: Admin page, calculating active users
+**Root Cause**: `users` wasn't guaranteed to be an array
+**Fix**: Added Array.isArray() validation
+```typescript
+// In loadData
+if (usersData.success && Array.isArray(usersData.data)) {
+  setUsers(usersData.data)
+} else {
+  setUsers([])
+}
+
+// In render
+{(Array.isArray(users) ? users.filter(u => u.isActive).length : 0).toLocaleString()}
+```
+**Status**: ✅ Fixed
+
+### Error 11: Create User Button Does Nothing
+**Error**: Button click had no effect
+**Root Cause**: Button was placeholder without functionality
+**Fix**: 
+  - Added state for modal visibility and form data
+  - Created handleCreateUser function
+  - Added onClick handler to button
+  - Created modal with complete form
+**Status**: ✅ Fixed
+
+### Error 12: 500 Internal Server Error on User Creation (CURRENT ISSUE)
+**Error**: POST to `/api/users` returns 500 status
+**User Attempted**: Creating user "Vicente Garcia" with email "vgracia04@gmail.com", password "12345678"
+**Response**: `{success: false, error: "Error interno del servidor"}`
+**User Feedback**: Also mentioned autocomplete warning on password field
+**Status**: ❌ **Currently investigating** - Need to check server logs for actual error
+
+## 5. Problem Solving
+
+### Solved Problems:
+
+1. **Build Deployment**: Fixed all TypeScript errors preventing Vercel build
+2. **Database Schema Sync**: Successfully migrated production database despite connection pooling limitations
+3. **Authentication Flow**: Complete NextAuth.js setup with JWT strategy
+4. **Admin Access**: Created role-based navigation and admin panel
+5. **Null Safety**: Added comprehensive checks to prevent runtime errors
+6. **User Management UI**: Complete modal form for creating users
+
+### Ongoing Troubleshooting:
+
+**Current Issue**: 500 error when creating users through admin panel
+- API endpoint exists and authentication is working
+- Error occurs during POST request processing
+- Need to investigate actual server error (currently caught and returning generic message)
+- Possible causes:
+  - Database constraint violation
+  - Missing field validation
+  - Audit log creation failure
+  - Permission check failure
+
+## 6. All User Messages
+
+1. Initial message sharing Vercel build error logs with 5 TypeScript errors
+2. Sharing environment variables from Vercel dashboard
+3. Runtime error screenshot showing missing emailVerified column
+4. Database schema showing old users table structure without auth fields
+5. "Puedes hacerlo tu?" - Asking if I could run the migration myself
+6. "No se hizo el redeploy parece en vercel" - Noting deployment didn't happen
+7. "en /reportes y en /admin está esté error [toLocaleString error log]"
+8. "En el panel admin está esté error [filter is not a function error log]"
+9. "Le doy a crear un usuario y no pasa nada, habilita las funciones de todas las secciones pero en especifico del panel admin"
+10. "Me da error al crear usuarios admin: [500 error with full request/response details, autocomplete warning]"
+
+## 7. Pending Tasks
+
+1. **Fix 500 error on user creation** - Currently blocking user from creating new users
+2. Add autocomplete attributes to password fields (mentioned in console warning)
+3. Test complete authentication flow in production
+4. Update AGENT_CONTEXT.md with deployment completion status
+
+## 8. Current Work
+
+Immediately before this summary request, I was investigating the 500 Internal Server Error occurring when creating users through the admin panel. The user provided detailed error information:
+
+**Request Details**:
+- URL: `https://reponedor-nuam.vercel.app/api/users`
+- Method: POST
+- Payload: `{name: "Vicente Garcia ", email: "vgracia04@gmail.com", password: "12345678", role: "ACCOUNTANT"}`
+- Status: 500 Internal Server Error
+- Response: `{success: false, error: "Error interno del servidor"}`
+
+**Last Action**: I read the `/app/api/users/route.ts` file (lines 95-143) to examine the POST handler code and identify potential issues. The code shows:
+- Email uniqueness check
+- Password hashing with bcryptjs
+- User creation with Prisma
+- Audit log creation
+- Generic error handling that catches all errors and returns "Error interno del servidor"
+
+**Analysis**: The generic error handling is masking the actual error. The code needs better error logging or more specific error messages to identify what's failing (could be database constraints, validation, or audit log creation).
+
+## 9. Optional Next Step
+
+The next step is to improve error handling in the `/api/users` POST endpoint to expose the actual error causing the 500 status. This involves:
+
+1. Modifying the catch block to log the actual error details
+2. Optionally returning more specific error messages
+3. Testing user creation again to see the real error
+4. Fixing the underlying issue once identified
+
+**Direct quote from conversation**:
+User: "Me da error al crear usuarios admin:... api/users:1 Failed to load resource: the server responded with a status of 500 ()... {success: false, error: "Error interno del servidor"}"
+
+The user is actively trying to create a new user and getting a 500 error. This is the immediate blocking issue that needs resolution..
+Please continue the conversation from where we left it off without asking the user any further questions. Continue with the last task that you were asked to work on.
+I need to investigate the actual error causing the 500 status when creating users. Let me improve the error handling in the users API endpoint to see what's really failing.
+Read route.ts
+I can see the issue - the error handling in the POST endpoint is catching the actual error but only logging it to console.error and returning a generic message. Let me check what those background Prisma processes are doing first, then improve the error handling:
+BashOutput
+OUT
+<status>killed</status>
+
+<stdout>
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": PostgreSQL database "postgres", schema "public" at "aws-1-us-east-1.pooler.supabase.com:6543"
+</stdout>
+
+<stderr>
+Environment variables loaded from .env
+</stderr>
+
+<timestamp>2025-12-18T21:50:38.550Z</timestamp>
+BashOutput
+OUT
+<status>killed</status>
+
+<stdout>
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": PostgreSQL database "postgres", schema "public" at "aws-1-us-east-1.pooler.supabase.com:6543"
+</stdout>
+
+<stderr>
+Environment variables loaded from .env
+</stderr>
+
+<timestamp>2025-12-18T21:50:38.550Z</timestamp>
+The Prisma processes were killed. Now let me improve the error handling to expose the actual error. I'll modify the POST endpoint to return more specific error information:
+Edit route.ts
+Added 1 line
+Good. Now let me also check the GET endpoint and improve its error handling too:
+Edit route.ts
+Added 1 line
+Now let me check if there are similar issues in the GET endpoint response structure. Let me look at what the admin page expects:
+Read page.tsx
+I see the issue! The admin page expects usersData.data but the GET endpoint is returning { users, total }. Let me fix the response structure:
+Edit route.ts
+Added 1 line
+Click to expand
+Perfect! Now I've fixed two issues:
+Added isActive to the select so the admin page can filter active users
+Changed the response from { users, total } to { data: users, total } to match what the admin page expects
+Now let me push these changes to trigger a new deployment:
+Bash Commit and push API improvements
+IN
+git add frontend/src/app/api/users/route.ts && git commit -m "fix: improve error handling and response structure in users API" && git push
+OUT
+[main acfa539] fix: improve error handling and response structure in users API
+ 1 file changed, 7 insertions(+), 4 deletions(-)
+To https://github.com/Ignvvcio254/ReponedorNUAM.git
+   ed4b0d9..acfa539  main -> main
+I've pushed the fixes to GitHub. The changes will:
+Improved error handling: Now the API will return the actual error message instead of just "Error interno del servidor", which will help us identify the issue
+Fixed response structure: Changed from { users, total } to { data: users, total } to match what the admin page expects
+Added isActive field: Now the GET endpoint returns the isActive field so the admin dashboard can properly filter active users
+Once Vercel redeploys, please try creating a user again. The error message should now be more specific and tell us exactly what's failing. Let me update the todo list to reflect the current work:
+Update Todos
+
+Fix user creation API error handling and response structure
+
+Test user creation in production after deployment
+
+Probar login en producción
+The changes have been pushed and Vercel should be redeploying now. Once the deployment completes, when you try to create a user again, you'll see a specific error message that will tell us exactly what's wrong (whether it's a database constraint, missing field, or something else).
+Request URL
+https://reponedor-nuam.vercel.app/api/users
+Request Method
+POST
+Status Code
+400 Bad Request
+Remote Address
+64.29.17.195:443
+Referrer Policy
+strict-origin-when-cross-origin
+access-control-allow-headers
+Content-Type, Authorization
+access-control-allow-methods
+GET, POST, PUT, DELETE, OPTIONS
+access-control-allow-origin
+*
+cache-control
+public, max-age=0, must-revalidate
+content-type
+application/json
+date
+Thu, 18 Dec 2025 22:46:18 GMT
+referrer-policy
+strict-origin-when-cross-origin
+server
+Vercel
+strict-transport-security
+max-age=63072000; includeSubDomains; preload
+vary
+RSC, Next-Router-State-Tree, Next-Router-Prefetch
+x-content-type-options
+nosniff
+x-frame-options
+DENY
+x-matched-path
+/api/users
+x-vercel-cache
+MISS
+x-vercel-id
+gru1::iad1::dx7nh-1766097977915-fbb9f93ec7f0
+:authority
+reponedor-nuam.vercel.app
+:method
+POST
+:path
+/api/users
+:scheme
+https
+accept
+*/*
+accept-encoding
+gzip, deflate, br, zstd
+accept-language
+es-MX,es-419;q=0.9,es;q=0.8,en;q=0.7
+content-length
+97
+content-type
+application/json
+cookie
+__vercel_toolbar=1; __Host-next-auth.csrf-token=4e18553f0f81df17c8f9ba2f47ebaa9ce0dec9220e913d4a0425b3ea0b9ce7e3%7C0d62b0935497b0f553a47363f5a0b4d6a4df8b4becc474e6a9beb260b62634ad; __Secure-next-auth.callback-url=https%3A%2F%2Freponedor-nuam.vercel.app%2Fdashboard; __Secure-next-auth.session-token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..kShAf4Xtmp5Nnf3C.I-zaeP3sg8pVj1aIoRoeC-ipiIbGtsDxckl7OYsdCK2uVRdrL_Y54AVpILfFzlRLG6wJqctG-ii_GajraEfgTmFkVz2f0kxhQUmdtaafxI0W-ioKNWyZfslnHn-aLlBFNGRUV9MmLb-lolKOTxSsekuid0XiJCsKt15CshuY3cakyB-0YQ9_O3lP2r8NXDbriwPoSUTPFrIqSQ6np8VCxAhb0zACJp0QlbRFd_9BnpyznaAINX-lJeOr2X07qU_LfRaJ4pnn_HO5qvbYNAn6j5CUbIN-XDIly-zqaRp7F80KDw.zus8D7zH-PM1noe4FDDxZQ
+origin
+https://reponedor-nuam.vercel.app
+priority
+u=1, i
+referer
+https://reponedor-nuam.vercel.app/admin
+sec-ch-ua
+"Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"
+sec-ch-ua-mobile
+?1
+sec-ch-ua-platform
+"Android"
+sec-fetch-dest
+empty
+sec-fetch-mode
+cors
+sec-fetch-site
+same-origin
+user-agent
+Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36
+
+
+
+{success: false,…}
+error
+: 
+"Error al crear usuario: \nInvalid `prisma.user.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"22P02\", message: \"invalid input value for enum \\\"UserRole\\\": \\\"ACCOUNTANT\\\"\", severity: \"ERROR\", detail: None, column: None, hint: None }), transient: false })"
+success
+: 
+false
+
+{
+    "success": false,
+    "error": "Error al crear usuario: \nInvalid `prisma.user.create()` invocation:\n\n\nError occurred during query execution:\nConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: \"22P02\", message: \"invalid input value for enum \\\"UserRole\\\": \\\"ACCOUNTANT\\\"\", severity: \"ERROR\", detail: None, column: None, hint: None }), transient: false })"
+}
+
+
+s.fetch	@	requests.js:1
+E	@	page-2dc342218e2f3663.js:1
+a_	@	fd9d1056-a55c5f950089544c.js:1
+aR	@	fd9d1056-a55c5f950089544c.js:1
+(anonymous)	@	fd9d1056-a55c5f950089544c.js:1
+sF	@	fd9d1056-a55c5f950089544c.js:1
+sM	@	fd9d1056-a55c5f950089544c.js:1
+(anonymous)	@	fd9d1056-a55c5f950089544c.js:1
+o4	@	fd9d1056-a55c5f950089544c.js:1
+iV	@	fd9d1056-a55c5f950089544c.js:1
+sU	@	fd9d1056-a55c5f950089544c.js:1
+uR	@	fd9d1056-a55c5f950089544c.js:1
+uM	@	fd9d1056-a55c5f950089544c.js:1
+
+
+favicon.ico:1  Failed to load resource: the server responded with a status of 404 ()
+admin:1 [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) <input required minlength=​"8" class=​"w-full px-3 py-2 border border-gray-300 rounded-lg focus:​ring-2 focus:​ring-nuam-500 focus:​border-transparent" placeholder=​"Mínimo 8 caracteres" type=​"password" value=​"Admin123!NUAM">​
+requests.js:1  POST https://reponedor-nuam.vercel.app/api/users 400 (Bad Request)
+s.fetch @ requests.js:1
+E @ page-2dc342218e2f3663.js:1
+a_ @ fd9d1056-a55c5f950089544c.js:1
+aR @ fd9d1056-a55c5f950089544c.js:1
+(anonymous) @ fd9d1056-a55c5f950089544c.js:1
+sF @ fd9d1056-a55c5f950089544c.js:1
+sM @ fd9d1056-a55c5f950089544c.js:1
+(anonymous) @ fd9d1056-a55c5f950089544c.js:1
+o4 @ fd9d1056-a55c5f950089544c.js:1
+iV @ fd9d1056-a55c5f950089544c.js:1
+sU @ fd9d1056-a55c5f950089544c.js:1
+uR @ fd9d1056-a55c5f950089544c.js:1
+uM @ fd9d1056-a55c5f950089544c.js:1
+requests.js:1  POST https://reponedor-nuam.vercel.app/api/users 400 (Bad Request)
+s.fetch @ requests.js:1
+E @ page-2dc342218e2f3663.js:1
+a_ @ fd9d1056-a55c5f950089544c.js:1
+aR @ fd9d1056-a55c5f950089544c.js:1
+(anonymous) @ fd9d1056-a55c5f950089544c.js:1
+sF @ fd9d1056-a55c5f950089544c.js:1
+sM @ fd9d1056-a55c5f950089544c.js:1
+(anonymous) @ fd9d1056-a55c5f950089544c.js:1
+o4 @ fd9d1056-a55c5f950089544c.js:1
+iV @ fd9d1056-a55c5f950089544c.js:1
+sU @ fd9d1056-a55c5f950089544c.js:1
+uR @ fd9d1056-a55c5f950089544c.js:1
+uM @ fd9d1056-a55c5f950089544c.js:1
+Perfect! Now I can see the real issue. The error is:
+invalid input value for enum "UserRole": "ACCOUNTANT"
+This means the database enum UserRole doesn't have the value ACCOUNTANT. The database enum values are different from what the Prisma schema expects. Let me check what enum values exist in the database:
+Read schema.prisma (lines 1-100)
+The Prisma schema shows ACCOUNTANT is a valid enum value. The issue is that the database enum doesn't match. Let me check what the database actually has by creating a script to query the enum values:
+Write check-enum.js
+48 lines
+require('dotenv').config();
+const { Client } = require('pg');
+
+async function checkEnum() {
+  const client = new Client({
+    connectionString: process.env.DATABASE_URL,
+  });
+
+  try {
+    await client.connect();
+    console.log('Connected to database');
+
+    // Query to check enum values
+    const result = await client.query(`
+      SELECT enumlabel
+      FROM pg_enum
+      WHERE enumtypid = (
+        SELECT oid
+        FROM pg_type
+        WHERE typname = 'UserRole'
+      )
+      ORDER BY enumsortorder;
+    `);
+
+    console.log('\nCurrent UserRole enum values in database:');
+    result.rows.forEach((row, index) => {
+      console.log(`${index + 1}. ${row.enumlabel}`);
+    });
+
+    // Also check what the users table expects
+    const tableInfo = await client.query(`
+      SELECT column_name, data_type, udt_name
+      FROM information_schema.columns
+      WHERE table_name = 'users' AND column_name = 'role';
+    `);
+
+    console.log('\nUsers table role column info:');
+    console.log(tableInfo.rows[0]);
+
+  } catch (error) {
+    console.error('Error:', error);
+  } finally {
+    await client.end();
+  }
+}
+
+checkEnum();
+Bash Check database enum values
+IN
+cd /home/ignvvcio254/Documentos/GitHub/ReponedorNUAM/frontend && node check-enum.js
+OUT
+Connected to database
+
+Current UserRole enum values in database:
+1. ADMIN
+2. USER
+3. VIEWER
+
+Users table role column info:
+{
+  column_name: 'role',
+  data_type: 'USER-DEFINED',
+  udt_name: 'UserRole'
+}
+Ah! There's the problem! The database has the old enum values:
+ADMIN ✅
+USER ❌ (should be MANAGER, ACCOUNTANT, AUDITOR)
+VIEWER ✅
+But the Prisma schema expects:
+ADMIN
+MANAGER
+ACCOUNTANT
+AUDITOR
+VIEWER
+I need to update the database enum to add the missing values. Let me create a migration script:
+Write fix-enum.js
+52 lines
+require('dotenv').config();
+const { Client } = require('pg');
+
+async function fixEnum() {
+  const client = new Client({
+    connectionString: process.env.DATABASE_URL,
+  });
+
+  try {
+    await client.connect();
+    console.log('Connected to database');
+
+    // Add the missing enum values
+    console.log('\nAdding MANAGER to UserRole enum...');
+    await client.query(`ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'MANAGER'`);
+    console.log('✓ MANAGER added');
+
+    console.log('\nAdding ACCOUNTANT to UserRole enum...');
+    await client.query(`ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'ACCOUNTANT'`);
+    console.log('✓ ACCOUNTANT added');
+
+    console.log('\nAdding AUDITOR to UserRole enum...');
+    await client.query(`ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'AUDITOR'`);
+    console.log('✓ AUDITOR added');
+
+    // Verify the changes
+    const result = await client.query(`
+      SELECT enumlabel
+      FROM pg_enum
+      WHERE enumtypid = (
+        SELECT oid
+        FROM pg_type
+        WHERE typname = 'UserRole'
+      )
+      ORDER BY enumsortorder;
+    `);
+
+    console.log('\nUpdated UserRole enum values:');
+    result.rows.forEach((row, index) => {
+      console.log(`${index + 1}. ${row.enumlabel}`);
+    });
+
+    console.log('\n✓ Enum migration completed successfully!');
+  } catch (error) {
+    console.error('Error:', error);
+  } finally {
+    await client.end();
+  }
+}
+
+fixEnum();
+Bash Add missing enum values to database
+IN
+node fix-enum.js
+OUT
+Connected to database
+
+Adding MANAGER to UserRole enum...
+✓ MANAGER added
+
+Adding ACCOUNTANT to UserRole enum...
+✓ ACCOUNTANT added
+
+Adding AUDITOR to UserRole enum...
+✓ AUDITOR added
+
+Updated UserRole enum values:
+1. ADMIN
+2. USER
+3. VIEWER
+4. MANAGER
+5. ACCOUNTANT
+6. AUDITOR
+
+✓ Enum migration completed successfully!
+Perfect! The enum has been fixed. Now the database has all the required values:
+ADMIN ✅
+USER (legacy, can be migrated later)
+VIEWER ✅
+MANAGER ✅
+ACCOUNTANT ✅
+AUDITOR ✅
+Let me update the todo list and let you know the status:
+Update Todos
+
+Fix user creation API error handling and response structure
+
+Fix database UserRole enum values
+
+Test user creation in production
+¡Listo! He encontrado y solucionado el problema: Problema: La base de datos tenía valores antiguos en el enum UserRole:
+Solo tenía: ADMIN, USER, VIEWER
+Pero el código esperaba: ADMIN, MANAGER, ACCOUNTANT, AUDITOR, VIEWER
+Solución: He agregado los valores faltantes (MANAGER, ACCOUNTANT, AUDITOR) al enum en la base de datos. Ahora puedes intentar crear un usuario nuevamente desde el panel de administración en reponedor-nuam.vercel.app/admin. La creación de usuarios debería funcionar correctamente. Los cambios aplicados fueron:
+✅ Mejorada la gestión de errores en la API para mostrar mensajes específicos
+✅ Corregida la estructura de respuesta de la API (ahora retorna { data: users })
+✅ Agregado el campo isActive a la respuesta de usuarios
+✅ Actualizado el enum UserRole en la base de datos con todos los roles necesarios
+Haz un commit y push
+Bash Commit and push enum fix scripts
+IN
+cd /home/ignvvcio254/Documentos/GitHub/ReponedorNUAM/frontend && git add check-enum.js fix-enum.js && git commit -m "feat: add database enum migration scripts for UserRole" && git push
+OUT
+[main aa2cb25] feat: add database enum migration scripts for UserRole
+ 2 files changed, 98 insertions(+)
+ create mode 100644 frontend/check-enum.js
+ create mode 100644 frontend/fix-enum.js
+To https://github.com/Ignvvcio254/ReponedorNUAM.git
+   acfa539..aa2cb25  main -> main
+Update Todos
+
+Fix user creation API error handling and response structure
+
+Fix database UserRole enum values
+
+Commit and push enum migration scripts
+
+Test user creation in production
+✓ Cambios subidos a GitHub. Vercel debería hacer el redeploy automáticamente. Los scripts de migración del enum han sido guardados en el repositorio para referencia futura:
+check-enum.js - Para verificar los valores actuales del enum
+fix-enum.js - Para agregar los valores faltantes
+Ahora puedes probar crear un usuario desde el panel admin. La creación debería funcionar correctamente.
+Ahora si funciona pero en el panel admin no refleja los datos reales como los usuarios que si hay por ejemplo
+Déjame revisar el panel de admin para ver qué datos está mostrando y por qué no refleja los usuarios reales:
+Read page.tsx (lines 101-250)
+Read page.tsx (lines 251-350)
+Veo que el panel está intentando mostrar user.lastLoginAt pero ese campo no está siendo devuelto por la API. Déjame verificar qué campos están faltando en la respuesta:
+Read route.ts (lines 40-69)
+El problema es que la API no está devolviendo el campo lastLoginAt que el panel admin necesita. Voy a agregar ese campo y otros que pueden ser útiles:
+Edit route.ts
+Added 3 lines
+Perfecto. Ahora voy a hacer el commit y push:
+Bash Commit and push user fields fix
+IN
+cd /home/ignvvcio254/Documentos/GitHub/ReponedorNUAM/frontend && git add src/app/api/users/route.ts && git commit -m "feat: add lastLoginAt and security fields to users API response" && git push
+OUT
+[main 7d8818c] feat: add lastLoginAt and security fields to users API response
+ 1 file changed, 3 insertions(+)
+To https://github.com/Ignvvcio254/ReponedorNUAM.git
+   aa2cb25..7d8818c  main -> main
+Update Todos
+
+Fix user creation API error handling and response structure
+
+Fix database UserRole enum values
+
+Add missing user fields to API response
+
+Verify admin panel displays user data correctly
+Listo! He agregado los campos faltantes a la API de usuarios: Campos agregados:
+lastLoginAt - Para mostrar el último login en el panel admin
+lastLoginIp - Para auditoría de seguridad
+emailVerified - Para ver si el email está verificado
+Ahora el panel de admin debería mostrar correctamente:
+✅ Lista completa de usuarios
+✅ Último login de cada usuario
+✅ Estado activo/inactivo
+✅ Rol de cada usuario
+✅ Estadísticas reales (usuarios totales, usuarios activos)
+Una vez que Vercel termine de redesplegar, el panel admin mostrará todos los datos correctamente.
+cree un usuario y el panel admi nestá así NUAM Logo
+Dashboard
+Calificaciones
+Entidades
+Importar
+Reportes
+Admin
+
+Administrador Sistema
+
+ADMIN
+
+A
+Panel de Administración
+Gestión de usuarios y auditoría del sistema
+
+Usuarios Totales
+
+0
+
+Usuarios Activos
+
+0
+
+Eventos de Auditoría
+
+0
+
+Usuarios
+Auditoría
+Configuración
+Gestión de Usuarios
+Crear Usuario
+Usuario	Email	Rol	Estado	Último Login
+No hay usuarios para mostrar
+El problema es que el panel admin está mostrando 0 usuarios aunque acabas de crear uno. Esto significa que el estado users está vacío. Déjame verificar si hay un problema con cómo se están cargando los datos:
+Read page.tsx (lines 45-74)
+El código del panel admin parece correcto. El problema debe ser que la API /api/users no está devolviendo datos o está fallando. Déjame agregar más logging para diagnosticar. Pero primero, déjame verificar si hay un problema con la consola del navegador. ¿Podrías abrir la consola del navegador (F12) y verificar si hay algún error cuando cargas el panel admin? Mientras tanto, voy a mejorar el logging en la API para ayudar a diagnosticar:
+Edit page.tsx
+Added 8 lines
+Bash Commit debug logging for admin panel
+IN
+cd /home/ignvvcio254/Documentos/GitHub/ReponedorNUAM/frontend && git add src/app/admin/page.tsx && git commit -m "debug: add console logging to admin panel data loading" && git push
+OUT
+[main 7817163] debug: add console logging to admin panel data loading
+ 1 file changed, 8 insertions(+)
+To https://github.com/Ignvvcio254/ReponedorNUAM.git
+   7d8818c..7817163  main -> main
+Ahora espera a que Vercel termine el redeploy y luego:
+Abre el panel de admin (reponedor-nuam.vercel.app/admin)
+Abre la consola del navegador (presiona F12 o clic derecho → Inspeccionar → Console)
+Recarga la página
+Copia y envíame todos los mensajes de consola que aparezcan (especialmente los que dicen "Users response status", "Users data", etc.)
+Eso me ayudará a entender si:
+La API está respondiendo correctamente
+Los datos están llegando pero no se están mostrando
+Hay algún error en la petición
+Aún no me cargan, me aparece esto page-614551be5b284dd8.js:1 Users response status: 200
+page-614551be5b284dd8.js:1 Audit response status: 200
+page-614551be5b284dd8.js:1 Users data: {success: true, data: {…}}
+page-614551be5b284dd8.js:1 Audit data: {success: true, data: {…}}
+page-614551be5b284dd8.js:1 Users data not valid, setting empty array
+feedback.js:2 [Violation] Added non-passive event listener to a scroll-blocking 'touchstart' event. Consider marking event handler as 'passive' to make the page more responsive. See https://www.chromestatus.com/feature/5745543795965952
+He.S.toolbar @ feedback.js:2
+He @ feedback.js:2
+(anonymous) @ feedback.js:2
+(anonymous) @ feedback.js:2
+(anonymous) @ feedback.js:2
+(anonymous) @ feedback.js:2
+r @ feedback.js:2
+s @ feedback.js:2
+Promise.then
+r @ feedback.js:2
+s @ feedback.js:2
+Promise.then
+r @ feedback.js:2
+s @ feedback.js:2
+Promise.then
+r @ feedback.js:2
+s @ feedback.js:2
+Promise.then
+r @ feedback.js:2
+s @ feedback.js:2
+(anonymous) @ feedback.js:2
+(anonymous) @ feedback.js:2
+rt @ feedback.js:2
+nt @ feedback.js:2
+(anonymous) @ feedback.js:2
+(anonymous) @ feedback.js:2
+(anonymous) @ feedback.js:2
+(anonymous) @ feedback.js:2
+r @ feedback.js:2
+s @ feedback.js:2
+Promise.then
+r @ feedback.js:2
+s @ feedback.js:2
+(anonymous) @ feedback.js:2
+(anonymous) @ feedback.js:2
+p @ feedback.js:2
+f @ feedback.js:2
+(anonymous) @ feedback.js:2
+(anonymous) @ feedback.js:2
+(anonymous) @ feedback.js:2
+¡Ahí está el problema! La consola muestra:
+Users data: {success: true, data: {…}}
+Users data not valid, setting empty array
+Esto significa que usersData.data no es un array, es un objeto. El problema es que la API está devolviendo { success: true, data: { data: users, total: users.length } } en lugar de { success: true, data: users }. Déjame verificar el helper createSuccessResponse:
+Globpattern: "**/api-helpers.ts"
+Found 1 file
+Read api-helpers.ts
+Ahí está el problema. El createSuccessResponse envuelve todo en { success: true, data: ... }, entonces cuando hago:
+return createSuccessResponse({ data: users, total: users.length })
+El resultado final es:
+{
+  "success": true,
+  "data": {
+    "data": users,  // ← El array está anidado aquí
+    "total": 10
+  }
+}
+Pero el código del admin espera:
+{
+  "success": true,
+  "data": users  // ← Array directamente
+}
+Tengo dos opciones:
+Cambiar la API para que devuelva solo el array
+Cambiar el admin panel para acceder a usersData.data.data
+Voy a cambiar la API porque es más limpio:
+Edit route.ts
+Modified
+Bash Fix API response structure
+IN
+cd /home/ignvvcio254/Documentos/GitHub/ReponedorNUAM/frontend && git add src/app/api/users/route.ts && git commit -m "fix: correct users API response structure to return array directly" && git push
+OUT
+[main feb20e0] fix: correct users API response structure to return array directly
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+To https://github.com/Ignvvcio254/ReponedorNUAM.git
+   7817163..feb20e0  main -> main
+Update Todos
+
+Fix users API response structure
+
+Verify admin panel displays user data correctly after deployment
+Perfecto! He encontrado y corregido el problema: El problema: La API estaba devolviendo:
+{
+  "success": true,
+  "data": {
+    "data": [usuarios...],  // ← Array anidado incorrectamente
+    "total": 2
+  }
+}
+La solución: Ahora devuelve:
+{
+  "success": true,
+  "data": [usuarios...]  // ← Array directamente
+}
+Una vez que Vercel termine el redeploy (debería tomar 1-2 minutos), recarga el panel de admin y deberías ver:
+✅ Todos los usuarios listados en la tabla
+✅ Estadísticas correctas (usuarios totales, usuarios activos)
+✅ Información de último login
+✅ Roles y estados de cada usuario
+Agreguemos muchas más funciones al panel admin a nivel profeisonal, como eliminar o modificar rol de usuario, negar modificaciones tributarias o muchas más, prioricemos el POO y codigo limpio teniendo en cuenta de que debe estár todo bien conectado para que las funciones sean correctas y bien aplicadas
+Excelente idea. Voy a crear un panel de administración profesional con funciones completas de gestión de usuarios y control del sistema. Empezaré por planificar las funcionalidades y luego implementarlas con código limpio y POO.
+Update Todos
+
+Design admin panel architecture with clean code principles
+
+Create user management API endpoints (UPDATE, DELETE, toggle status)
+
+Implement role-based permission validation service
+
+Build admin panel UI components with edit/delete/deactivate
+
+Add audit log filtering and search functionality
+
+Implement system settings and configuration management
+
+Add data export and reporting features
+
+Test all admin functionalities end-to-end
+Voy a crear un sistema completo de administración profesional. Empezaré creando servicios y clases con POO:
+1. Primero, creo un servicio de gestión de usuarios con POO
+Write UserManagementService.ts
+421 lines
+/**
+ * User Management Service
+ * Handles all user-related operations with clean architecture
+ */
+
+import { db } from '@/lib/db'
+import { UserRole } from '../../generated/prisma'
+import { hash } from 'bcryptjs'
+
+export interface UserUpdateData {
+  name?: string
+  email?: string
+  role?: UserRole
+  isActive?: boolean
+  password?: string
+}
+
+export interface UserSearchParams {
+  search?: string
+  role?: UserRole
+  isActive?: boolean
+  page?: number
+  limit?: number
+}
+
+export class UserManagementService {
+  private readonly SALT_ROUNDS = 12
+
+  /**
+   * Get user by ID with full details
+   */
+  async getUserById(userId: string) {
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        lastLoginAt: true,
+        lastLoginIp: true,
+        emailVerified: true,
+        failedLoginAttempts: true,
+        lockedUntil: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            qualifications: true,
+            importBatches: true,
+            auditLogs: true,
+          },
+        },
+      },
+    })
+
+    if (!user) {
+      throw new Error('Usuario no encontrado')
+    }
+
+    return user
+  }
+
+  /**
+   * Search and filter users with pagination
+   */
+  async searchUsers(params: UserSearchParams) {
+    const { search, role, isActive, page = 1, limit = 50 } = params
+    const skip = (page - 1) * limit
+
+    const whereClause: any = {}
+
+    if (role) {
+      whereClause.role = role
+    }
+
+    if (isActive !== undefined) {
+      whereClause.isActive = isActive
+    }
+
+    if (search) {
+      whereClause.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ]
+    }
+
+    const [users, total] = await Promise.all([
+      db.user.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          isActive: true,
+          lastLoginAt: true,
+          lastLoginIp: true,
+          emailVerified: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: {
+            select: {
+              qualifications: true,
+              importBatches: true,
+              auditLogs: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      db.user.count({ where: whereClause }),
+    ])
+
+    return {
+      users,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page * limit < total,
+        hasPrevious: page > 1,
+      },
+    }
+  }
+
+  /**
+   * Update user information
+   */
+  async updateUser(userId: string, data: UserUpdateData, updatedBy: string) {
+    const user = await this.getUserById(userId)
+
+    // Prepare update data
+    const updateData: any = {}
+
+    if (data.name !== undefined) updateData.name = data.name
+    if (data.email !== undefined) updateData.email = data.email
+    if (data.role !== undefined) updateData.role = data.role
+    if (data.isActive !== undefined) updateData.isActive = data.isActive
+
+    if (data.password) {
+      updateData.password = await hash(data.password, this.SALT_ROUNDS)
+    }
+
+    const updatedUser = await db.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        updatedAt: true,
+      },
+    })
+
+    // Create audit log
+    await db.auditLog.create({
+      data: {
+        action: 'UPDATE',
+        entityType: 'User',
+        entityId: userId,
+        userId: updatedBy,
+        oldValues: {
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          isActive: user.isActive,
+        },
+        newValues: updateData,
+      },
+    })
+
+    return updatedUser
+  }
+
+  /**
+   * Toggle user active status
+   */
+  async toggleUserStatus(userId: string, updatedBy: string) {
+    const user = await this.getUserById(userId)
+
+    const updatedUser = await db.user.update({
+      where: { id: userId },
+      data: { isActive: !user.isActive },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        isActive: true,
+      },
+    })
+
+    await db.auditLog.create({
+      data: {
+        action: 'UPDATE',
+        entityType: 'User',
+        entityId: userId,
+        userId: updatedBy,
+        oldValues: { isActive: user.isActive },
+        newValues: { isActive: updatedUser.isActive },
+      },
+    })
+
+    return updatedUser
+  }
+
+  /**
+   * Change user role
+   */
+  async changeUserRole(userId: string, newRole: UserRole, updatedBy: string) {
+    const user = await this.getUserById(userId)
+
+    const updatedUser = await db.user.update({
+      where: { id: userId },
+      data: { role: newRole },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+      },
+    })
+
+    await db.auditLog.create({
+      data: {
+        action: 'UPDATE',
+        entityType: 'User',
+        entityId: userId,
+        userId: updatedBy,
+        oldValues: { role: user.role },
+        newValues: { role: newRole },
+      },
+    })
+
+    return updatedUser
+  }
+
+  /**
+   * Soft delete user (deactivate)
+   */
+  async deactivateUser(userId: string, deletedBy: string) {
+    const user = await this.getUserById(userId)
+
+    if (user.role === 'ADMIN') {
+      // Check if this is the last admin
+      const adminCount = await db.user.count({
+        where: { role: 'ADMIN', isActive: true },
+      })
+
+      if (adminCount <= 1) {
+        throw new Error('No se puede desactivar el último administrador del sistema')
+      }
+    }
+
+    const updatedUser = await db.user.update({
+      where: { id: userId },
+      data: { isActive: false },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        isActive: true,
+      },
+    })
+
+    await db.auditLog.create({
+      data: {
+        action: 'DELETE',
+        entityType: 'User',
+        entityId: userId,
+        userId: deletedBy,
+        oldValues: { isActive: true },
+        newValues: { isActive: false },
+      },
+    })
+
+    return updatedUser
+  }
+
+  /**
+   * Hard delete user (permanent)
+   * WARNING: This permanently removes the user and all related data
+   */
+  async permanentlyDeleteUser(userId: string, deletedBy: string) {
+    const user = await this.getUserById(userId)
+
+    if (user.role === 'ADMIN') {
+      const adminCount = await db.user.count({
+        where: { role: 'ADMIN', isActive: true },
+      })
+
+      if (adminCount <= 1) {
+        throw new Error('No se puede eliminar el último administrador del sistema')
+      }
+    }
+
+    // Log before deletion
+    await db.auditLog.create({
+      data: {
+        action: 'DELETE',
+        entityType: 'User',
+        entityId: userId,
+        userId: deletedBy,
+        oldValues: {
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        },
+        newValues: { deleted: true },
+      },
+    })
+
+    // Delete user (cascade will handle related records)
+    await db.user.delete({
+      where: { id: userId },
+    })
+
+    return { success: true, message: 'Usuario eliminado permanentemente' }
+  }
+
+  /**
+   * Reset user password
+   */
+  async resetUserPassword(userId: string, newPassword: string, resetBy: string) {
+    const hashedPassword = await hash(newPassword, this.SALT_ROUNDS)
+
+    await db.user.update({
+      where: { id: userId },
+      data: {
+        password: hashedPassword,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+      },
+    })
+
+    await db.auditLog.create({
+      data: {
+        action: 'UPDATE',
+        entityType: 'User',
+        entityId: userId,
+        userId: resetBy,
+        newValues: { password_reset: true },
+      },
+    })
+
+    return { success: true, message: 'Contraseña restablecida exitosamente' }
+  }
+
+  /**
+   * Unlock user account
+   */
+  async unlockUserAccount(userId: string, unlockedBy: string) {
+    await db.user.update({
+      where: { id: userId },
+      data: {
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+      },
+    })
+
+    await db.auditLog.create({
+      data: {
+        action: 'UPDATE',
+        entityType: 'User',
+        entityId: userId,
+        userId: unlockedBy,
+        newValues: { account_unlocked: true },
+      },
+    })
+
+    return { success: true, message: 'Cuenta desbloqueada exitosamente' }
+  }
+
+  /**
+   * Get user statistics
+   */
+  async getUserStats() {
+    const [total, active, byRole, recentLogins] = await Promise.all([
+      db.user.count(),
+      db.user.count({ where: { isActive: true } }),
+      db.user.groupBy({
+        by: ['role'],
+        _count: true,
+      }),
+      db.user.findMany({
+        where: {
+          lastLoginAt: { not: null },
+        },
+        orderBy: { lastLoginAt: 'desc' },
+        take: 10,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          lastLoginAt: true,
+        },
+      }),
+    ])
+
+    return {
+      total,
+      active,
+      inactive: total - active,
+      byRole: byRole.map((r) => ({
+        role: r.role,
+        count: r._count,
+      })),
+      recentLogins,
+    }
+  }
+}
+
+// Export singleton instance
+export const userManagementService = new UserManagementService()
+2. Ahora creo el servicio de auditoría
+Write AuditService.ts
+197 lines
+/**
+ * Audit Service
+ * Manages audit logs and system activity tracking
+ */
+
+import { db } from '@/lib/db'
+
+export interface AuditSearchParams {
+  userId?: string
+  action?: string
+  entityType?: string
+  startDate?: Date
+  endDate?: Date
+  page?: number
+  limit?: number
+}
+
+export class AuditService {
+  /**
+   * Search audit logs with filters
+   */
+  async searchAuditLogs(params: AuditSearchParams) {
+    const { userId, action, entityType, startDate, endDate, page = 1, limit = 50 } = params
+    const skip = (page - 1) * limit
+
+    const whereClause: any = {}
+
+    if (userId) {
+      whereClause.userId = userId
+    }
+
+    if (action) {
+      whereClause.action = action
+    }
+
+    if (entityType) {
+      whereClause.entityType = entityType
+    }
+
+    if (startDate || endDate) {
+      whereClause.createdAt = {}
+      if (startDate) whereClause.createdAt.gte = startDate
+      if (endDate) whereClause.createdAt.lte = endDate
+    }
+
+    const [logs, total] = await Promise.all([
+      db.auditLog.findMany({
+        where: whereClause,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      db.auditLog.count({ where: whereClause }),
+    ])
+
+    return {
+      logs,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page * limit < total,
+        hasPrevious: page > 1,
+      },
+    }
+  }
+
+  /**
+   * Get audit statistics
+   */
+  async getAuditStats(days: number = 30) {
+    const startDate = new Date()
+    startDate.setDate(startDate.getDate() - days)
+
+    const [totalLogs, byAction, byEntity, byUser] = await Promise.all([
+      db.auditLog.count({
+        where: {
+          createdAt: { gte: startDate },
+        },
+      }),
+      db.auditLog.groupBy({
+        by: ['action'],
+        _count: true,
+        where: {
+          createdAt: { gte: startDate },
+        },
+      }),
+      db.auditLog.groupBy({
+        by: ['entityType'],
+        _count: true,
+        where: {
+          createdAt: { gte: startDate },
+        },
+      }),
+      db.auditLog.groupBy({
+        by: ['userId'],
+        _count: true,
+        where: {
+          createdAt: { gte: startDate },
+        },
+        orderBy: {
+          _count: {
+            userId: 'desc',
+          },
+        },
+        take: 10,
+      }),
+    ])
+
+    return {
+      totalLogs,
+      byAction: byAction.map((a) => ({
+        action: a.action,
+        count: a._count,
+      })),
+      byEntity: byEntity.map((e) => ({
+        entityType: e.entityType,
+        count: e._count,
+      })),
+      topUsers: byUser.map((u) => ({
+        userId: u.userId,
+        count: u._count,
+      })),
+      period: days,
+    }
+  }
+
+  /**
+   * Get recent activity for a specific user
+   */
+  async getUserActivity(userId: string, limit: number = 20) {
+    const logs = await db.auditLog.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    })
+
+    return logs
+  }
+
+  /**
+   * Export audit logs to JSON
+   */
+  async exportAuditLogs(params: AuditSearchParams) {
+    const { logs } = await this.searchAuditLogs({ ...params, limit: 10000 })
+
+    return {
+      exportDate: new Date().toISOString(),
+      filters: params,
+      totalRecords: logs.length,
+      data: logs,
+    }
+  }
+
+  /**
+   * Clean old audit logs (data retention policy)
+   */
+  async cleanOldLogs(retentionDays: number = 365) {
+    const cutoffDate = new Date()
+    cutoffDate.setDate(cutoffDate.getDate() - retentionDays)
+
+    const result = await db.auditLog.deleteMany({
+      where: {
+        createdAt: { lt: cutoffDate },
+      },
+    })
+
+    return {
+      deletedCount: result.count,
+      cutoffDate,
+    }
+  }
+}
+
+// Export singleton instance
+export const auditService = new AuditService()
+3. Ahora actualizo la API de usuarios para usar el servicio
+Read route.ts
+Write route.ts
+129 lines
+/**
+ * API: /api/users/[id]
+ * Methods: GET, PUT, DELETE
+ * Auth: Required (Admin only)
+ */
+
+import { NextRequest } from 'next/server'
+import { getCurrentUser } from '@/lib/auth'
+import { createErrorResponse, createSuccessResponse } from '@/lib/api-helpers'
+import { userManagementService } from '@/services/UserManagementService'
+import { UserRole } from '../../../../../generated/prisma'
+
+// ============================================================================
+// GET - Get User by ID
+// ============================================================================
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
+      return createErrorResponse('Unauthorized - Authentication required', 401)
+    }
+
+    if (currentUser.role !== 'ADMIN' && currentUser.id !== params.id) {
+      return createErrorResponse('Forbidden - Admin access required', 403)
+    }
+
+    const user = await userManagementService.getUserById(params.id)
+    return createSuccessResponse(user)
+  } catch (error) {
+    console.error('Error fetching user:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor'
+    return createErrorResponse(errorMessage, 500)
+  }
+}
+
+// ============================================================================
+// PUT - Update User
+// ============================================================================
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
+      return createErrorResponse('Unauthorized - Authentication required', 401)
+    }
+
+    if (currentUser.role !== 'ADMIN') {
+      return createErrorResponse('Forbidden - Admin access required', 403)
+    }
+
+    const body = await request.json()
+
+    // Validate role if provided
+    if (body.role && !['ADMIN', 'MANAGER', 'ACCOUNTANT', 'AUDITOR', 'VIEWER'].includes(body.role)) {
+      return createErrorResponse('Rol inválido', 400)
+    }
+
+    // Prevent self-demotion from admin
+    if (currentUser.id === params.id && body.role && body.role !== 'ADMIN') {
+      return createErrorResponse('No puedes cambiar tu propio rol de administrador', 400)
+    }
+
+    // Prevent self-deactivation
+    if (currentUser.id === params.id && body.isActive === false) {
+      return createErrorResponse('No puedes desactivar tu propia cuenta', 400)
+    }
+
+    const updatedUser = await userManagementService.updateUser(
+      params.id,
+      body,
+      currentUser.id
+    )
+
+    return createSuccessResponse(updatedUser)
+  } catch (error) {
+    console.error('Error updating user:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor'
+    return createErrorResponse(errorMessage, 500)
+  }
+}
+
+// ============================================================================
+// DELETE - Deactivate User (Soft Delete)
+// ============================================================================
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
+      return createErrorResponse('Unauthorized - Authentication required', 401)
+    }
+
+    if (currentUser.role !== 'ADMIN') {
+      return createErrorResponse('Forbidden - Admin access required', 403)
+    }
+
+    // Prevent self-deletion
+    if (currentUser.id === params.id) {
+      return createErrorResponse('No puedes eliminar tu propia cuenta', 400)
+    }
+
+    const { searchParams } = new URL(request.url)
+    const permanent = searchParams.get('permanent') === 'true'
+
+    let result
+    if (permanent) {
+      result = await userManagementService.permanentlyDeleteUser(params.id, currentUser.id)
+    } else {
+      result = await userManagementService.deactivateUser(params.id, currentUser.id)
+    }
+
+    return createSuccessResponse(result)
+  } catch (error) {
+    console.error('Error deleting user:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor'
+    return createErrorResponse(errorMessage, 500)
+  }
+}
+4. Creo endpoints adicionales para operaciones específicas
+Write route.ts
+39 lines
+/**
+ * API: /api/users/[id]/toggle-status
+ * Method: POST
+ * Auth: Required (Admin only)
+ * Purpose: Toggle user active/inactive status
+ */
+
+import { NextRequest } from 'next/server'
+import { getCurrentUser } from '@/lib/auth'
+import { createErrorResponse, createSuccessResponse } from '@/lib/api-helpers'
+import { userManagementService } from '@/services/UserManagementService'
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
+      return createErrorResponse('Unauthorized - Authentication required', 401)
+    }
+
+    if (currentUser.role !== 'ADMIN') {
+      return createErrorResponse('Forbidden - Admin access required', 403)
+    }
+
+    if (currentUser.id === params.id) {
+      return createErrorResponse('No puedes cambiar el estado de tu propia cuenta', 400)
+    }
+
+    const result = await userManagementService.toggleUserStatus(params.id, currentUser.id)
+    return createSuccessResponse(result)
+  } catch (error) {
+    console.error('Error toggling user status:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor'
+    return createErrorResponse(errorMessage, 500)
+  }
+}
+Write route.ts
+57 lines
+/**
+ * API: /api/users/[id]/change-role
+ * Method: POST
+ * Auth: Required (Admin only)
+ * Purpose: Change user role
+ */
+
+import { NextRequest } from 'next/server'
+import { getCurrentUser } from '@/lib/auth'
+import { createErrorResponse, createSuccessResponse } from '@/lib/api-helpers'
+import { userManagementService } from '@/services/UserManagementService'
+import { UserRole } from '../../../../../../generated/prisma'
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
+      return createErrorResponse('Unauthorized - Authentication required', 401)
+    }
+
+    if (currentUser.role !== 'ADMIN') {
+      return createErrorResponse('Forbidden - Admin access required', 403)
+    }
+
+    const body = await request.json()
+    const { role } = body
+
+    if (!role) {
+      return createErrorResponse('Rol es requerido', 400)
+    }
+
+    const validRoles = ['ADMIN', 'MANAGER', 'ACCOUNTANT', 'AUDITOR', 'VIEWER']
+    if (!validRoles.includes(role)) {
+      return createErrorResponse('Rol inválido', 400)
+    }
+
+    if (currentUser.id === params.id && role !== 'ADMIN') {
+      return createErrorResponse('No puedes cambiar tu propio rol de administrador', 400)
+    }
+
+    const result = await userManagementService.changeUserRole(
+      params.id,
+      role as UserRole,
+      currentUser.id
+    )
+
+    return createSuccessResponse(result)
+  } catch (error) {
+    console.error('Error changing user role:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor'
+    return createErrorResponse(errorMessage, 500)
+  }
+}
+Write route.ts
+51 lines
+/**
+ * API: /api/users/[id]/reset-password
+ * Method: POST
+ * Auth: Required (Admin only)
+ * Purpose: Reset user password
+ */
+
+import { NextRequest } from 'next/server'
+import { getCurrentUser } from '@/lib/auth'
+import { createErrorResponse, createSuccessResponse } from '@/lib/api-helpers'
+import { userManagementService } from '@/services/UserManagementService'
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
+      return createErrorResponse('Unauthorized - Authentication required', 401)
+    }
+
+    if (currentUser.role !== 'ADMIN') {
+      return createErrorResponse('Forbidden - Admin access required', 403)
+    }
+
+    const body = await request.json()
+    const { newPassword } = body
+
+    if (!newPassword) {
+      return createErrorResponse('Nueva contraseña es requerida', 400)
+    }
+
+    if (newPassword.length < 8) {
+      return createErrorResponse('La contraseña debe tener al menos 8 caracteres', 400)
+    }
+
+    const result = await userManagementService.resetUserPassword(
+      params.id,
+      newPassword,
+      currentUser.id
+    )
+
+    return createSuccessResponse(result)
+  } catch (error) {
+    console.error('Error resetting password:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor'
+    return createErrorResponse(errorMessage, 500)
+  }
+}
+Write route.ts
+32 lines
+/**
+ * API: /api/users/stats
+ * Method: GET
+ * Auth: Required (Admin only)
+ * Purpose: Get user statistics
+ */
+
+import { NextRequest } from 'next/server'
+import { getCurrentUser } from '@/lib/auth'
+import { createErrorResponse, createSuccessResponse } from '@/lib/api-helpers'
+import { userManagementService } from '@/services/UserManagementService'
+
+export async function GET(request: NextRequest) {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
+      return createErrorResponse('Unauthorized - Authentication required', 401)
+    }
+
+    if (currentUser.role !== 'ADMIN') {
+      return createErrorResponse('Forbidden - Admin access required', 403)
+    }
+
+    const stats = await userManagementService.getUserStats()
+    return createSuccessResponse(stats)
+  } catch (error) {
+    console.error('Error fetching user stats:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor'
+    return createErrorResponse(errorMessage, 500)
+  }
+}
+Update Todos
+
+Design admin panel architecture with clean code principles
+
+Create user management API endpoints (UPDATE, DELETE, toggle status)
+
+Update audit logs API with search and filtering
+
+Build admin panel UI components with edit/delete/deactivate
+
+Add system settings and configuration management
+
+Test all admin functionalities end-to-end
+5. Actualizo la API de audit logs para usar el servicio
+Read route.ts
+Edit route.ts
+Removed 6 lines
+Write route.ts
+35 lines
+/**
+ * API: /api/audit-logs/stats
+ * Method: GET
+ * Auth: Required (Admin only)
+ * Purpose: Get audit log statistics
+ */
+
+import { NextRequest } from 'next/server'
+import { getCurrentUser } from '@/lib/auth'
+import { createErrorResponse, createSuccessResponse } from '@/lib/api-helpers'
+import { auditService } from '@/services/AuditService'
+
+export async function GET(request: NextRequest) {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
+      return createErrorResponse('Unauthorized - Authentication required', 401)
+    }
+
+    if (currentUser.role !== 'ADMIN') {
+      return createErrorResponse('Forbidden - Admin access required', 403)
+    }
+
+    const { searchParams } = new URL(request.url)
+    const days = parseInt(searchParams.get('days') || '30')
+
+    const stats = await auditService.getAuditStats(days)
+    return createSuccessResponse(stats)
+  } catch (error) {
+    console.error('Error fetching audit stats:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor'
+    return createErrorResponse(errorMessage, 500)
+  }
+}
+Write route.ts
+49 lines
+/**
+ * API: /api/audit-logs/export
+ * Method: GET
+ * Auth: Required (Admin only)
+ * Purpose: Export audit logs to JSON
+ */
+
+import { NextRequest } from 'next/server'
+import { getCurrentUser } from '@/lib/auth'
+import { createErrorResponse } from '@/lib/api-helpers'
+import { auditService } from '@/services/AuditService'
+
+export async function GET(request: NextRequest) {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
+      return createErrorResponse('Unauthorized - Authentication required', 401)
+    }
+
+    if (currentUser.role !== 'ADMIN') {
+      return createErrorResponse('Forbidden - Admin access required', 403)
+    }
+
+    const { searchParams } = new URL(request.url)
+
+    const params = {
+      userId: searchParams.get('userId') || undefined,
+      action: searchParams.get('action') || undefined,
+      entityType: searchParams.get('entityType') || undefined,
+      startDate: searchParams.get('startDate') ? new Date(searchParams.get('startDate')!) : undefined,
+      endDate: searchParams.get('endDate') ? new Date(searchParams.get('endDate')!) : undefined,
+    }
+
+    const exportData = await auditService.exportAuditLogs(params)
+
+    // Return as downloadable JSON file
+    return new Response(JSON.stringify(exportData, null, 2), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Disposition': `attachment; filename="audit-logs-${new Date().toISOString().split('T')[0]}.json"`,
+      },
+    })
+  } catch (error) {
+    console.error('Error exporting audit logs:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor'
+    return createErrorResponse(errorMessage, 500)
+  }
+}
+Ahora voy a crear el componente UI mejorado para el panel admin. Primero, voy a crear un componente modular con subcomponentes:
+Write UserTable.tsx
+248 lines
+/**
+ * User Table Component
+ * Displays users with actions (edit, delete, toggle status, change role)
+ */
+
+'use client'
+
+import { useState } from 'react'
+import {
+  PencilIcon,
+  TrashIcon,
+  LockClosedIcon,
+  LockOpenIcon,
+  ShieldCheckIcon,
+} from '@heroicons/react/24/outline'
+
+export interface User {
+  id: string
+  name: string
+  email: string
+  role: string
+  isActive: boolean
+  lastLoginAt: string | null
+  createdAt: string
+  _count?: {
+    qualifications: number
+    importBatches: number
+    auditLogs: number
+  }
+}
+
+interface UserTableProps {
+  users: User[]
+  currentUserId: string
+  onEdit: (user: User) => void
+  onDelete: (userId: string) => void
+  onToggleStatus: (userId: string) => void
+  onChangeRole: (userId: string) => void
+}
+
+export function UserTable({
+  users,
+  currentUserId,
+  onEdit,
+  onDelete,
+  onToggleStatus,
+  onChangeRole,
+}: UserTableProps) {
+  const [loadingActions, setLoadingActions] = useState<Record<string, boolean>>({})
+
+  const roleColors: Record<string, string> = {
+    ADMIN: 'bg-purple-100 text-purple-800 border-purple-300',
+    MANAGER: 'bg-blue-100 text-blue-800 border-blue-300',
+    ACCOUNTANT: 'bg-green-100 text-green-800 border-green-300',
+    AUDITOR: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+    VIEWER: 'bg-gray-100 text-gray-800 border-gray-300',
+  }
+
+  const roleLabels: Record<string, string> = {
+    ADMIN: 'Administrador',
+    MANAGER: 'Gerente',
+    ACCOUNTANT: 'Contador',
+    AUDITOR: 'Auditor',
+    VIEWER: 'Visor',
+  }
+
+  const handleAction = async (userId: string, action: () => void) => {
+    setLoadingActions((prev) => ({ ...prev, [userId]: true }))
+    try {
+      await action()
+    } finally {
+      setLoadingActions((prev) => ({ ...prev, [userId]: false }))
+    }
+  }
+
+  if (users.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <ShieldCheckIcon className="mx-auto h-12 w-12 text-gray-400" />
+        <h3 className="mt-2 text-sm font-medium text-gray-900">No hay usuarios</h3>
+        <p className="mt-1 text-sm text-gray-500">
+          Comienza creando un nuevo usuario.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Usuario
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Rol
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Estado
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Último Acceso
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Actividad
+            </th>
+            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Acciones
+            </th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {users.map((user) => {
+            const isCurrentUser = user.id === currentUserId
+            const isLoading = loadingActions[user.id]
+
+            return (
+              <tr
+                key={user.id}
+                className={`hover:bg-gray-50 transition-colors ${
+                  isCurrentUser ? 'bg-blue-50' : ''
+                }`}
+              >
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0 h-10 w-10">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-nuam-500 to-nuam-700 flex items-center justify-center">
+                        <span className="text-white font-semibold text-sm">
+                          {user.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="ml-4">
+                      <div className="text-sm font-medium text-gray-900">
+                        {user.name}
+                        {isCurrentUser && (
+                          <span className="ml-2 text-xs text-blue-600">(Tú)</span>
+                        )}
+                      </div>
+                      <div className="text-sm text-gray-500">{user.email}</div>
+                    </div>
+                  </div>
+                </td>
+
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <button
+                    onClick={() => !isCurrentUser && !isLoading && handleAction(user.id, () => onChangeRole(user.id))}
+                    disabled={isCurrentUser || isLoading}
+                    className={`inline-flex items-center px-2.5 py-1.5 border text-xs font-medium rounded-md transition-all ${
+                      roleColors[user.role] || 'bg-gray-100 text-gray-800 border-gray-300'
+                    } ${
+                      !isCurrentUser && !isLoading
+                        ? 'hover:shadow-md cursor-pointer'
+                        : 'opacity-60 cursor-not-allowed'
+                    }`}
+                  >
+                    {roleLabels[user.role] || user.role}
+                    {!isCurrentUser && !isLoading && (
+                      <PencilIcon className="ml-1.5 h-3 w-3" />
+                    )}
+                  </button>
+                </td>
+
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <button
+                    onClick={() => !isCurrentUser && !isLoading && handleAction(user.id, () => onToggleStatus(user.id))}
+                    disabled={isCurrentUser || isLoading}
+                    className={`inline-flex items-center px-2.5 py-1.5 text-xs font-semibold rounded-full transition-all ${
+                      user.isActive
+                        ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                        : 'bg-red-100 text-red-800 hover:bg-red-200'
+                    } ${
+                      isCurrentUser || isLoading
+                        ? 'opacity-60 cursor-not-allowed'
+                        : 'cursor-pointer'
+                    }`}
+                  >
+                    {user.isActive ? (
+                      <>
+                        <LockOpenIcon className="mr-1 h-3 w-3" />
+                        Activo
+                      </>
+                    ) : (
+                      <>
+                        <LockClosedIcon className="mr-1 h-3 w-3" />
+                        Inactivo
+                      </>
+                    )}
+                  </button>
+                </td>
+
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {user.lastLoginAt
+                    ? new Date(user.lastLoginAt).toLocaleString('es-ES', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : 'Nunca'}
+                </td>
+
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <div className="flex gap-2 text-xs">
+                    {user._count && (
+                      <>
+                        <span title="Calificaciones">{user._count.qualifications} Q</span>
+                        <span title="Importaciones">{user._count.importBatches} I</span>
+                        <span title="Auditorías">{user._count.auditLogs} A</span>
+                      </>
+                    )}
+                  </div>
+                </td>
+
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => !isLoading && handleAction(user.id, () => onEdit(user))}
+                      disabled={isLoading}
+                      className="text-nuam-600 hover:text-nuam-900 transition-colors disabled:opacity-50"
+                      title="Editar usuario"
+                    >
+                      <PencilIcon className="h-5 w-5" />
+                    </button>
+
+                    {!isCurrentUser && (
+                      <button
+                        onClick={() => !isLoading && handleAction(user.id, () => onDelete(user.id))}
+                        disabled={isLoading}
+                        className="text-red-600 hover:text-red-900 transition-colors disabled:opacity-50"
+                        title="Eliminar usuario"
+                      >
+                        <TrashIcon className="h-5 w-5" />
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+Continúo creando más componentes modulares para el admin panel. Voy a crear modales para editar, cambiar rol, etc:
+Write EditUserModal.tsx
+154 lines
+/**
+ * Edit User Modal Component
+ * Modal for editing user information
