@@ -1,3 +1,10 @@
+/**
+ * API: /api/qualifications/[id]
+ * Methods: GET, PUT, DELETE
+ * Auth: Required
+ * Permissions: Read, Update, Delete on qualifications
+ */
+
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { Country, QualificationStatus, Prisma } from '../../../../../generated/prisma'
@@ -6,6 +13,9 @@ import { auditService } from '@/services/AuditService'
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    // Require authentication and read permission for qualifications
+    await requirePermission('qualifications', 'read')
+
     const qualification = await db.qualification.findUnique({
       where: { id: params.id },
       include: {
@@ -32,9 +42,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     })
   } catch (error) {
     console.error('Error fetching qualification:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor'
+    const statusCode = errorMessage.includes('Unauthorized') ? 401 :
+                       errorMessage.includes('Forbidden') ? 403 : 500
     return NextResponse.json(
-      { success: false, error: 'Error interno del servidor' },
-      { status: 500 }
+      { success: false, error: errorMessage },
+      { status: statusCode }
     )
   }
 }

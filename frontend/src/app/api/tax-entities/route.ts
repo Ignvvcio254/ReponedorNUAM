@@ -1,9 +1,20 @@
+/**
+ * API: /api/tax-entities
+ * Methods: GET, POST
+ * Auth: Required
+ * Permissions: Read, Create on tax-entities
+ */
+
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requirePermission } from '@/lib/auth'
 import { Country, EntityType, EntityStatus, TaxRegime } from '../../../../generated/prisma'
 
 export async function GET(request: NextRequest) {
   try {
+    // Require authentication and read permission for tax-entities
+    await requirePermission('tax-entities', 'read')
+
     const { searchParams } = new URL(request.url)
     const country = searchParams.get('country') as Country || undefined
     const status = searchParams.get('status') as EntityStatus || undefined
@@ -54,15 +65,21 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error fetching tax entities:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor'
+    const statusCode = errorMessage.includes('Unauthorized') ? 401 :
+                       errorMessage.includes('Forbidden') ? 403 : 500
     return NextResponse.json(
-      { success: false, error: 'Error interno del servidor' },
-      { status: 500 }
+      { success: false, error: errorMessage },
+      { status: statusCode }
     )
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication and create permission for tax-entities
+    await requirePermission('tax-entities', 'create')
+
     const body = await request.json()
     
     // Validaciones básicas
@@ -119,9 +136,12 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
   } catch (error) {
     console.error('Error creating tax entity:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor'
+    const statusCode = errorMessage.includes('Unauthorized') ? 401 :
+                       errorMessage.includes('Forbidden') ? 403 : 500
     return NextResponse.json(
-      { success: false, error: 'Error interno del servidor' },
-      { status: 500 }
+      { success: false, error: errorMessage },
+      { status: statusCode }
     )
   }
 }

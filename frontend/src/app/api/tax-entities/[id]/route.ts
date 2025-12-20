@@ -1,9 +1,20 @@
+/**
+ * API: /api/tax-entities/[id]
+ * Methods: GET, PUT, DELETE
+ * Auth: Required
+ * Permissions: Read, Update, Delete on tax-entities
+ */
+
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
+import { requirePermission } from '@/lib/auth'
 import { Country, EntityType, EntityStatus, TaxRegime } from '../../../../../generated/prisma'
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    // Require authentication and read permission for tax-entities
+    await requirePermission('tax-entities', 'read')
+
     const taxEntity = await db.taxEntity.findUnique({
       where: { id: params.id },
       include: {
@@ -43,15 +54,21 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     })
   } catch (error) {
     console.error('Error fetching tax entity:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor'
+    const statusCode = errorMessage.includes('Unauthorized') ? 401 :
+                       errorMessage.includes('Forbidden') ? 403 : 500
     return NextResponse.json(
-      { success: false, error: 'Error interno del servidor' },
-      { status: 500 }
+      { success: false, error: errorMessage },
+      { status: statusCode }
     )
   }
 }
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    // Require authentication and update permission for tax-entities
+    await requirePermission('tax-entities', 'update')
+
     const body = await request.json()
     
     // Verificar que la entidad existe
@@ -115,15 +132,21 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     })
   } catch (error) {
     console.error('Error updating tax entity:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor'
+    const statusCode = errorMessage.includes('Unauthorized') ? 401 :
+                       errorMessage.includes('Forbidden') ? 403 : 500
     return NextResponse.json(
-      { success: false, error: 'Error interno del servidor' },
-      { status: 500 }
+      { success: false, error: errorMessage },
+      { status: statusCode }
     )
   }
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    // Require authentication and delete permission for tax-entities
+    await requirePermission('tax-entities', 'delete')
+
     // Verificar que la entidad existe
     const existingEntity = await db.taxEntity.findUnique({
       where: { id: params.id },
@@ -169,9 +192,12 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     })
   } catch (error) {
     console.error('Error deleting tax entity:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor'
+    const statusCode = errorMessage.includes('Unauthorized') ? 401 :
+                       errorMessage.includes('Forbidden') ? 403 : 500
     return NextResponse.json(
-      { success: false, error: 'Error interno del servidor' },
-      { status: 500 }
+      { success: false, error: errorMessage },
+      { status: statusCode }
     )
   }
 }
