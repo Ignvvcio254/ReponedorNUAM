@@ -2,6 +2,10 @@
 
 Sistema empresarial para la gestión de calificaciones tributarias, entidades fiscales y procesos de cumplimiento para América Latina.
 
+![PRODUCCION](https://reponedor-nuam.vercel.app/)
+
+Desde dispositivos moviles cuenta con un bloqueo de pantalla para que no se pueda acceder a la aplicacion por resolucion de pantalla, solo se permite acceder desde computadoras.
+
 ![Next.js](https://img.shields.io/badge/Next.js-14-black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-green)
@@ -165,9 +169,18 @@ NEXTAUTH_URL="http://localhost:3000"
 
 ## 📄 Licencia
 
-Propietario - NUAM Holdings
+Propietario - Ignaio Navarrete.
+Colaborador - Vicente Garcia.
 
 ## 👤 Contacto
 
-**Tech Lead**: Ignacio Navarrete  
-**Email**: ignacio.navarrete@nuam.com
+**Project Manager Full Stack**: Ignacio Navarrete.  
+**Email**: ignacio.andres.navarrete.silva@gmail.com
+**GitHub**: [Ignvvcio254](https://github.com/Ignvvcio254)
+**LinkedIn**: [Ignacio Navarrete Silva](https://www.linkedin.com/in/ignacio-navarrete-223b9b336/)
+**Portafolio**: [Ignacio Navarrete Silva](https://portafolio-254.vercel.app/)
+
+**Colaborador y desarrollador Full Stack**
+**Email**: vgarcia04@gmail.com
+**GitHub**: [Vicho1937](https://github.com/Vicho1937)
+
