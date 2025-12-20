@@ -36,9 +36,6 @@ export async function GET(request: NextRequest) {
       ]
     }
     
-    // Get current time for session expiration check
-    const now = new Date()
-    
     const users = await db.user.findMany({
       where: whereClause,
       select: {
@@ -58,16 +55,6 @@ export async function GET(request: NextRequest) {
             importBatches: true,
             auditLogs: true
           }
-        },
-        // Include sessions to check if user is online
-        sessions: {
-          where: {
-            expires: { gt: now }  // Only non-expired sessions
-          },
-          select: {
-            id: true,
-            expires: true
-          }
         }
       },
       orderBy: {
@@ -75,12 +62,46 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Transform users to include isOnline field
-    const usersWithOnlineStatus = users.map(user => ({
-      ...user,
-      isOnline: user.sessions.length > 0,  // Online if has at least one active session
-      sessions: undefined  // Remove sessions from response to keep it clean
-    }))
+    // For each user, check if they have an active session by looking at audit logs
+    // A user is "online" if their last LOGIN is more recent than their last LOGOUT
+    const usersWithOnlineStatus = await Promise.all(
+      users.map(async (user) => {
+        // Get the most recent LOGIN and LOGOUT for this user
+        const [lastLogin, lastLogout] = await Promise.all([
+          db.auditLog.findFirst({
+            where: {
+              userId: user.id,
+              action: { in: ['LOGIN', 'LOGIN_SUCCESS'] },
+              entityType: 'User'
+            },
+            orderBy: { createdAt: 'desc' },
+            select: { createdAt: true }
+          }),
+          db.auditLog.findFirst({
+            where: {
+              userId: user.id,
+              action: 'LOGOUT',
+              entityType: 'User'
+            },
+            orderBy: { createdAt: 'desc' },
+            select: { createdAt: true }
+          })
+        ])
+
+        // User is online if:
+        // 1. They have a login record AND
+        // 2. Either no logout record exists OR last login is after last logout
+        const isOnline = lastLogin !== null && (
+          lastLogout === null || 
+          lastLogin.createdAt > lastLogout.createdAt
+        )
+
+        return {
+          ...user,
+          isOnline
+        }
+      })
+    )
 
     return createSuccessResponse(usersWithOnlineStatus)
   } catch (error) {
