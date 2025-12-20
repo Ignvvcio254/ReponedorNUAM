@@ -202,8 +202,8 @@ export default function QualificationDetailModal({
               <div className="p-4 rounded-xl bg-gray-50">
                 <p className="text-xs font-medium text-gray-500 mb-1">Valor Calculado</p>
                 <p className="text-lg font-semibold text-gray-900">
-                  {qualification.calculatedValue 
-                    ? `${qualification.calculatedValue.toFixed(4)} ${country.unit}`
+                  {qualification.calculatedValue != null
+                    ? `${Number(qualification.calculatedValue).toFixed(4)} ${country.unit}`
                     : 'N/A'
                   }
                 </p>
