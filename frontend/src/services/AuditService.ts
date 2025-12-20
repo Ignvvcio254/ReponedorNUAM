@@ -61,7 +61,13 @@ export class AuditService {
     }
 
     if (action) {
-      whereClause.action = action
+      // Support multiple actions separated by comma (e.g., "LOGIN,LOGOUT,FAILED_LOGIN")
+      const actions = action.split(',').map(a => a.trim()).filter(a => a.length > 0)
+      if (actions.length === 1) {
+        whereClause.action = actions[0]
+      } else if (actions.length > 1) {
+        whereClause.action = { in: actions }
+      }
     }
 
     if (entityType) {
