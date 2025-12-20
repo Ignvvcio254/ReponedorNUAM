@@ -200,12 +200,13 @@ function ActivityTimelineItem({
       <div className="flex-1 pb-4">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">
-              {activity.description}
+            <p className="text-sm text-gray-900">
+              <span className="font-semibold text-gray-900">{activity.userName}</span>
+              <span className="text-gray-600"> {activity.description.toLowerCase().replace(/^se /, '')}</span>
             </p>
-            <p className="text-xs text-gray-500 mt-0.5">
-              {activity.userName}
-            </p>
+            <span className={`inline-flex items-center gap-1 text-xs font-medium mt-1 px-2 py-0.5 rounded-full ${style.gradient.replace('from-', 'bg-').split(' ')[0].replace('bg-', 'bg-')} bg-opacity-10`}>
+              {style.label}
+            </span>
           </div>
           <span className="text-xs text-gray-400 whitespace-nowrap bg-gray-50 px-2 py-1 rounded-full">
             {getRelativeTime(activity.createdAt)}
@@ -267,21 +268,16 @@ export default function QuickActionsPanel({ recentActivity }: QuickActionsPanelP
     }
   ]
 
-  // Default placeholder activity for when no real data is available
-  const defaultActivity: RecentActivityItem[] = [
-    { id: '1', action: 'CREATE', entityType: 'qualification', entityId: '', createdAt: new Date(Date.now() - 7200000).toISOString(), userName: 'Sistema', description: 'Se creó una nueva calificación tributaria' },
-    { id: '2', action: 'UPDATE', entityType: 'tax_entity', entityId: '', createdAt: new Date(Date.now() - 14400000).toISOString(), userName: 'Sistema', description: 'Se actualizó información de entidad' },
-    { id: '3', action: 'APPROVE', entityType: 'qualification', entityId: '', createdAt: new Date(Date.now() - 28800000).toISOString(), userName: 'Sistema', description: 'Calificación aprobada exitosamente' },
-    { id: '4', action: 'CREATE', entityType: 'import_batch', entityId: '', createdAt: new Date(Date.now() - 86400000).toISOString(), userName: 'Sistema', description: 'Se completó una importación masiva' },
-  ]
+  // No default placeholder - only show real activity from API
+  const hasRealActivity = recentActivity && recentActivity.length > 0
 
   // Filter out login/logout activities for dashboard (show only tax-related)
   const TAX_RELATED_ACTIONS = ['CREATE', 'UPDATE', 'DELETE', 'APPROVE', 'REJECT', 'SUBMIT', 'IMPORT', 'EXPORT']
-  const filteredActivity = recentActivity
+  const filteredActivity = hasRealActivity
     ? recentActivity.filter(activity => TAX_RELATED_ACTIONS.includes(activity.action))
     : []
 
-  const activityToShow = filteredActivity.length > 0 ? filteredActivity : defaultActivity
+  const activityToShow = filteredActivity
   const displayedActivity = showAllActivity ? activityToShow : activityToShow.slice(0, 4)
 
   return (
@@ -390,12 +386,19 @@ export default function QuickActionsPanel({ recentActivity }: QuickActionsPanelP
             ))}
           </div>
 
-          {/* Empty state with placeholder */}
-          {(!recentActivity || recentActivity.length === 0) && (
-            <div className="flex items-center justify-center gap-2 py-2">
-              <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
-              <p className="text-xs text-gray-400 italic">
-                Sincronizando actividad del sistema...
+          {/* Empty state */}
+          {activityToShow.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-6 text-center">
+              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p className="text-sm text-gray-500">
+                No hay actividad tributaria reciente
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                Las acciones aparecerán aquí cuando los usuarios realicen cambios
               </p>
             </div>
           )}
