@@ -1,37 +1,24 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { Country, ImportStatus, Prisma } from '../../../../generated/prisma'
+import { requirePermission } from '@/lib/auth'
+import { createErrorResponse, createSuccessResponse } from '@/lib/api-helpers'
 
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication and import permission
+    const currentUser = await requirePermission('import', 'create')
+    const userId = currentUser.id
+
     const formData = await request.formData()
     const file = formData.get('file') as File
-    const userId = formData.get('userId') as string
     
     if (!file) {
-      return NextResponse.json(
-        { success: false, error: 'No se proporcionó archivo' },
-        { status: 400 }
-      )
+      return createErrorResponse('No se proporcionó archivo', 400)
     }
 
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'ID de usuario es requerido' },
-        { status: 400 }
-      )
-    }
-
-    // Verificar que el usuario existe
-    const user = await db.user.findUnique({
-      where: { id: userId }
-    })
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Usuario no encontrado' },
-        { status: 404 }
-      )
-    }
+    // User is already verified through requirePermission
+    // No need to check again
 
     // Leer contenido del archivo
     const text = await file.text()
