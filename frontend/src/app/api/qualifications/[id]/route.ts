@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { Country, QualificationStatus, Prisma } from '../../../../../generated/prisma'
+import { requirePermission } from '@/lib/auth'
+import { auditService } from '@/services/AuditService'
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -39,6 +41,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    // Require authentication
+    const currentUser = await requirePermission('qualifications', 'update')
+    
     const body = await request.json()
     
     // Verificar que la calificación existe
@@ -69,6 +74,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       calculatedValue = new Prisma.Decimal(amount / factor)
     }
 
+    // Determine action type based on status change
+    let actionType = 'UPDATE'
+    if (body.status === 'APPROVED') actionType = 'APPROVE'
+    if (body.status === 'REJECTED') actionType = 'REJECT'
+
     const updatedQualification = await db.qualification.update({
       where: { id: params.id },
       data: {
@@ -96,21 +106,44 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
     })
 
+    // Log the action to audit log
+    await auditService.logAction({
+      userId: currentUser.id,
+      action: actionType,
+      entityType: 'qualification',
+      entityId: params.id,
+      oldValues: {
+        status: existingQualification.status,
+        emisorName: existingQualification.emisorName,
+      },
+      newValues: {
+        status: updatedQualification.status,
+        emisorName: updatedQualification.emisorName,
+        country: updatedQualification.country,
+      }
+    })
+
     return NextResponse.json({
       success: true,
       data: updatedQualification
     })
   } catch (error) {
     console.error('Error updating qualification:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor'
+    const statusCode = errorMessage.includes('Unauthorized') ? 401 :
+                       errorMessage.includes('Forbidden') ? 403 : 500
     return NextResponse.json(
-      { success: false, error: 'Error interno del servidor' },
-      { status: 500 }
+      { success: false, error: errorMessage },
+      { status: statusCode }
     )
   }
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    // Require authentication
+    const currentUser = await requirePermission('qualifications', 'delete')
+    
     // Verificar que la calificación existe
     const existingQualification = await db.qualification.findUnique({
       where: { id: params.id }
@@ -127,15 +160,31 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       where: { id: params.id }
     })
 
+    // Log the deletion to audit log
+    await auditService.logAction({
+      userId: currentUser.id,
+      action: 'DELETE',
+      entityType: 'qualification',
+      entityId: params.id,
+      oldValues: {
+        emisorName: existingQualification.emisorName,
+        country: existingQualification.country,
+        status: existingQualification.status,
+      }
+    })
+
     return NextResponse.json({
       success: true,
       message: 'Calificación eliminada exitosamente'
     })
   } catch (error) {
     console.error('Error deleting qualification:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor'
+    const statusCode = errorMessage.includes('Unauthorized') ? 401 :
+                       errorMessage.includes('Forbidden') ? 403 : 500
     return NextResponse.json(
-      { success: false, error: 'Error interno del servidor' },
-      { status: 500 }
+      { success: false, error: errorMessage },
+      { status: statusCode }
     )
   }
 }

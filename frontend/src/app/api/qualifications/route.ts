@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAuth, requirePermission } from '@/lib/auth'
+import { auditService } from '@/services/AuditService'
 
 // ============================================================================
 // CORS Configuration
@@ -157,6 +158,20 @@ export async function POST(request: NextRequest) {
             email: true
           }
         }
+      }
+    })
+
+    // Log the creation to audit log
+    await auditService.logAction({
+      userId: currentUser.id,
+      action: 'CREATE',
+      entityType: 'qualification',
+      entityId: newQualification.id,
+      newValues: {
+        emisorName: newQualification.emisorName,
+        country: newQualification.country,
+        amount: newQualification.amount,
+        period: newQualification.period,
       }
     })
 

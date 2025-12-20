@@ -17,6 +17,37 @@ export interface AuditSearchParams {
 
 export class AuditService {
   /**
+   * Log an action to the audit log
+   */
+  async logAction(params: {
+    userId: string
+    action: string
+    entityType: string
+    entityId: string
+    oldValues?: any
+    newValues?: any
+    description?: string
+  }) {
+    try {
+      const log = await db.auditLog.create({
+        data: {
+          userId: params.userId,
+          action: params.action,
+          entityType: params.entityType,
+          entityId: params.entityId,
+          oldValues: params.oldValues || null,
+          newValues: params.newValues || null,
+        },
+      })
+      return log
+    } catch (error) {
+      console.error('Error creating audit log:', error)
+      // Don't throw - audit logging should not break the main operation
+      return null
+    }
+  }
+
+  /**
    * Search audit logs with filters
    */
   async searchAuditLogs(params: AuditSearchParams) {
