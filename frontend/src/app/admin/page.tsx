@@ -460,9 +460,19 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* Audit Tab */}
+            {/* Audit Tab - Now just shows a message since Historial is above */}
             {activeTab === 'audit' && (
-              <AdminActivityHistory />
+              <div className="text-center py-8">
+                <div className="w-16 h-16 mx-auto bg-indigo-100 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Historial de Actividad</h3>
+                <p className="text-gray-600">
+                  El historial completo de actividad se encuentra arriba, justo debajo de las estadísticas.
+                </p>
+              </div>
             )}
 
             {/* Settings Tab */}

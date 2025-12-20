@@ -74,6 +74,19 @@ function getActivityStyle(action: string): { gradient: string; icon: React.React
         icon: <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>,
         label: 'Enviado'
       }
+    case 'LOGIN':
+    case 'LOGIN_SUCCESS':
+      return {
+        gradient: 'from-emerald-400 to-green-500',
+        icon: <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>,
+        label: 'Inició sesión'
+      }
+    case 'LOGOUT':
+      return {
+        gradient: 'from-gray-400 to-slate-500',
+        icon: <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>,
+        label: 'Cerró sesión'
+      }
     default:
       return {
         gradient: 'from-gray-400 to-gray-500',
@@ -279,14 +292,9 @@ export default function QuickActionsPanel({ recentActivity }: QuickActionsPanelP
   // Check if we have real activity data
   const hasRealActivity = recentActivity && recentActivity.length > 0
 
-  // Filter out login/logout activities for dashboard (show only tax-related)
-  const TAX_RELATED_ACTIONS = ['CREATE', 'UPDATE', 'DELETE', 'APPROVE', 'REJECT', 'SUBMIT', 'IMPORT', 'EXPORT']
-  const filteredActivity = hasRealActivity
-    ? recentActivity.filter(activity => TAX_RELATED_ACTIONS.includes(activity.action))
-    : []
-
-  // Use real activity if available, otherwise show placeholder
-  const activityToShow = filteredActivity.length > 0 ? filteredActivity : defaultActivity
+  // Show ALL activity types (removed filter to show real user data)
+  // Use real activity if available, otherwise show placeholder examples
+  const activityToShow = hasRealActivity ? recentActivity : defaultActivity
   const displayedActivity = showAllActivity ? activityToShow : activityToShow.slice(0, 4)
 
   return (
