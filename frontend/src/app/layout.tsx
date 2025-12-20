@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { SessionProvider } from '@/components/providers/SessionProvider'
 import { ToastProvider } from '@/components/ui/ToastContainer'
+import { DesktopOnlyWrapper } from '@/components/ui/DesktopOnlyWrapper'
 import { Header } from '@/components/layout/Header'
 import './globals.css'
 
@@ -22,12 +23,14 @@ export default function RootLayout({
       <body className={inter.className}>
         <SessionProvider>
           <ToastProvider>
-            <div className="min-h-screen bg-gray-50">
-              <Header />
-              <main>
-                {children}
-              </main>
-            </div>
+            <DesktopOnlyWrapper minWidth={1024}>
+              <div className="min-h-screen bg-gray-50">
+                <Header />
+                <main>
+                  {children}
+                </main>
+              </div>
+            </DesktopOnlyWrapper>
           </ToastProvider>
         </SessionProvider>
       </body>
