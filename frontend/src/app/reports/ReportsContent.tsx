@@ -187,12 +187,16 @@ export function ReportsContent() {
       const res = await fetch('/api/reports?type=stats')
       const result = await res.json()
       if (result.success) {
-        setStats(result.data)
+        // API returns { success: true, data: { data: {...}, filters: {...} } }
+        // Extract the actual stats data
+        const statsData = result.data?.data !== undefined ? result.data.data : result.data
+        setStats(statsData)
       }
     } catch (error) {
       console.error('Error loading stats:', error)
     }
   }
+
 
   const loadReport = async () => {
     setLoading(true)
@@ -209,7 +213,10 @@ export function ReportsContent() {
       const result = await res.json()
 
       if (result.success) {
-        setData(result.data)
+        // API returns { success: true, data: { data: [...], filters: {...} } }
+        // We need to extract the actual data from result.data.data
+        const responseData = result.data?.data !== undefined ? result.data.data : result.data
+        setData(responseData)
       } else {
         toast.error('Error al cargar el reporte: ' + result.error)
       }
@@ -220,6 +227,7 @@ export function ReportsContent() {
       setLoading(false)
     }
   }
+
 
   const handleExport = () => {
     if (!data) {
