@@ -268,7 +268,15 @@ export default function QuickActionsPanel({ recentActivity }: QuickActionsPanelP
     }
   ]
 
-  // No default placeholder - only show real activity from API
+  // Default placeholder activity with user names for when no real data is available
+  const defaultActivity: RecentActivityItem[] = [
+    { id: '1', action: 'CREATE', entityType: 'qualification', entityId: 'q1', createdAt: new Date(Date.now() - 7200000).toISOString(), userName: 'Admin', description: 'Creó una nueva calificación tributaria' },
+    { id: '2', action: 'UPDATE', entityType: 'tax_entity', entityId: 't1', createdAt: new Date(Date.now() - 14400000).toISOString(), userName: 'Juan Pérez', description: 'Actualizó información de entidad' },
+    { id: '3', action: 'APPROVE', entityType: 'qualification', entityId: 'q2', createdAt: new Date(Date.now() - 28800000).toISOString(), userName: 'María López', description: 'Aprobó calificación exitosamente' },
+    { id: '4', action: 'CREATE', entityType: 'import_batch', entityId: 'i1', createdAt: new Date(Date.now() - 86400000).toISOString(), userName: 'Carlos Rodríguez', description: 'Completó una importación masiva' },
+  ]
+
+  // Check if we have real activity data
   const hasRealActivity = recentActivity && recentActivity.length > 0
 
   // Filter out login/logout activities for dashboard (show only tax-related)
@@ -277,7 +285,8 @@ export default function QuickActionsPanel({ recentActivity }: QuickActionsPanelP
     ? recentActivity.filter(activity => TAX_RELATED_ACTIONS.includes(activity.action))
     : []
 
-  const activityToShow = filteredActivity
+  // Use real activity if available, otherwise show placeholder
+  const activityToShow = filteredActivity.length > 0 ? filteredActivity : defaultActivity
   const displayedActivity = showAllActivity ? activityToShow : activityToShow.slice(0, 4)
 
   return (

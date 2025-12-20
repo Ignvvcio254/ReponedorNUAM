@@ -324,6 +324,11 @@ export default function AdminPage() {
         {/* Stats Dashboard */}
         <AdminStats stats={userStats} auditCount={auditLogs.length} />
 
+        {/* Historial de Actividad - Visible Section */}
+        <div className="mb-6">
+          <AdminActivityHistory />
+        </div>
+
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow mb-6">
           <div className="border-b border-gray-200">
