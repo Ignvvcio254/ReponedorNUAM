@@ -430,7 +430,11 @@ function AlertCard({
 
 export default function AdvancedMetrics({ stats }: AdvancedMetricsProps) {
   // Calculate advanced metrics
-  const totalProcessedAmount = stats.byCountry.reduce((sum, country) => sum + country.totalAmount, 0)
+  // Ensure numeric conversion to avoid string concatenation (Prisma Decimal values may come as strings)
+  const totalProcessedAmount = stats.byCountry.reduce((sum, country) => {
+    const amount = Number(country.totalAmount) || 0
+    return sum + amount
+  }, 0)
   const avgAmountPerQualification = stats.overview.qualifications.total > 0 
     ? totalProcessedAmount / stats.overview.qualifications.total 
     : 0
