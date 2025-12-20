@@ -155,7 +155,9 @@ function MetricCard({
   icon, 
   gradient,
   trend,
-  delay = 0
+  delay = 0,
+  prefix = '',
+  formatAsCurrency = false
 }: { 
   title: string
   value: number | string
@@ -164,6 +166,8 @@ function MetricCard({
   gradient: string
   trend?: { value: number; isPositive: boolean }
   delay?: number
+  prefix?: string
+  formatAsCurrency?: boolean
 }) {
   const [isVisible, setIsVisible] = useState(false)
   const numericValue = typeof value === 'number' ? value : 0
@@ -175,12 +179,12 @@ function MetricCard({
   }, [delay])
 
   // Format large numbers to be more readable
-  const formatValue = (val: number | string): string => {
-    if (typeof val === 'string') return val
-    if (val >= 1000000000) return `$${(val / 1000000000).toFixed(1)}B`
-    if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`
-    if (val >= 1000) return `$${(val / 1000).toFixed(1)}K`
-    return val.toLocaleString()
+  const formatValue = (val: number, isCurrency: boolean = false): string => {
+    const currencySymbol = isCurrency ? '$' : ''
+    if (val >= 1000000000) return `${currencySymbol}${(val / 1000000000).toFixed(1)}B`
+    if (val >= 1000000) return `${currencySymbol}${(val / 1000000).toFixed(1)}M`
+    if (val >= 1000) return `${currencySymbol}${(val / 1000).toFixed(1)}K`
+    return `${currencySymbol}${val.toLocaleString()}`
   }
 
   // Get text size class based on value length
@@ -190,10 +194,24 @@ function MetricCard({
     return 'text-2xl sm:text-3xl'
   }
 
-  const displayValue = typeof value === 'number' 
-    ? animatedValue.toLocaleString() 
-    : value
-  
+  // Determine display value based on type and formatting options
+  const getDisplayValue = (): string => {
+    if (typeof value === 'string') return `${prefix}${value}`
+    
+    // For large currency values, use compact formatting
+    if (formatAsCurrency && animatedValue >= 1000) {
+      return formatValue(animatedValue, true)
+    }
+    
+    // For currency values under 1000, show with dollar sign
+    if (formatAsCurrency) {
+      return `$${animatedValue.toLocaleString()}`
+    }
+    
+    return `${prefix}${animatedValue.toLocaleString()}`
+  }
+
+  const displayValue = getDisplayValue()
   const textSizeClass = getTextSizeClass(displayValue)
 
   return (
@@ -442,8 +460,9 @@ export default function AdvancedMetrics({ stats }: AdvancedMetricsProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="Monto Total Procesado"
-          value={`$${totalProcessedAmount.toLocaleString()}`}
-          subtitle={`Prom: $${avgAmountPerQualification.toLocaleString()} por calif.`}
+          value={totalProcessedAmount}
+          formatAsCurrency={true}
+          subtitle={`Prom: ${isNaN(avgAmountPerQualification) || avgAmountPerQualification === 0 ? 'N/A' : `$${avgAmountPerQualification.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} por calif.`}
           gradient="from-emerald-400 to-teal-500"
           icon={
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
