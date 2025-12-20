@@ -174,6 +174,28 @@ function MetricCard({
     return () => clearTimeout(timer)
   }, [delay])
 
+  // Format large numbers to be more readable
+  const formatValue = (val: number | string): string => {
+    if (typeof val === 'string') return val
+    if (val >= 1000000000) return `$${(val / 1000000000).toFixed(1)}B`
+    if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`
+    if (val >= 1000) return `$${(val / 1000).toFixed(1)}K`
+    return val.toLocaleString()
+  }
+
+  // Get text size class based on value length
+  const getTextSizeClass = (val: string): string => {
+    if (val.length > 12) return 'text-lg sm:text-xl'
+    if (val.length > 8) return 'text-xl sm:text-2xl'
+    return 'text-2xl sm:text-3xl'
+  }
+
+  const displayValue = typeof value === 'number' 
+    ? animatedValue.toLocaleString() 
+    : value
+  
+  const textSizeClass = getTextSizeClass(displayValue)
+
   return (
     <div 
       className={`relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-lg hover:shadow-xl transition-all duration-500 transform ${
@@ -183,16 +205,16 @@ function MetricCard({
       {/* Gradient background decoration */}
       <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${gradient} opacity-10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2`} />
       
-      <div className="relative p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <p className="text-sm font-medium text-gray-500 mb-1">{title}</p>
-            <div className="flex items-baseline gap-2">
-              <p className="text-3xl font-bold text-gray-900">
-                {typeof value === 'number' ? animatedValue.toLocaleString() : value}
+      <div className="relative p-4 sm:p-6">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs sm:text-sm font-medium text-gray-500 mb-1 truncate">{title}</p>
+            <div className="flex flex-wrap items-baseline gap-2">
+              <p className={`${textSizeClass} font-bold text-gray-900 break-words`}>
+                {displayValue}
               </p>
               {trend && (
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${
                   trend.isPositive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                 }`}>
                   <svg 
@@ -207,10 +229,10 @@ function MetricCard({
                 </span>
               )}
             </div>
-            <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1 truncate">{subtitle}</p>
           </div>
-          <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-lg`}>
-            <div className="text-white">
+          <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-lg shrink-0`}>
+            <div className="text-white scale-75 sm:scale-100">
               {icon}
             </div>
           </div>
@@ -219,6 +241,7 @@ function MetricCard({
     </div>
   )
 }
+
 
 // Compliance Card Component
 function ComplianceCard({ 
