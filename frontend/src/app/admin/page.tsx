@@ -24,6 +24,7 @@ import { EditUserModal } from '@/components/admin/EditUserModal'
 import { ChangeRoleModal } from '@/components/admin/ChangeRoleModal'
 import { ResetPasswordModal } from '@/components/admin/ResetPasswordModal'
 import { DeleteUserModal } from '@/components/admin/DeleteUserModal'
+import AdminActivityHistory from '@/components/admin/AdminActivityHistory'
 import { useToast } from '@/components/ui/ToastContainer'
 
 interface UserStats {
@@ -456,53 +457,7 @@ export default function AdminPage() {
 
             {/* Audit Tab */}
             {activeTab === 'audit' && (
-              <div>
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    Registro de Auditoría (Últimos 50 eventos)
-                  </h2>
-                  <button
-                    onClick={handleExportAuditLogs}
-                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <ArrowDownTrayIcon className="w-5 h-5" />
-                    Exportar Logs
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  {auditLogs.map((log) => (
-                    <div
-                      key={log.id}
-                      className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${actionColors[log.action] || 'bg-gray-100 text-gray-800'}`}>
-                              {log.action}
-                            </span>
-                            <span className="text-sm font-medium text-gray-900">
-                              {log.entityType} #{log.entityId?.substring(0, 8)}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-600">
-                            Usuario: {log.user?.name || 'Sistema'} ({log.user?.email || 'N/A'})
-                          </p>
-                          {log.newValues && (
-                            <pre className="mt-2 text-xs text-gray-500 bg-gray-50 p-2 rounded overflow-x-auto">
-                              {JSON.stringify(log.newValues, null, 2)}
-                            </pre>
-                          )}
-                        </div>
-                        <div className="text-right text-sm text-gray-500">
-                          {new Date(log.createdAt).toLocaleString('es-ES')}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <AdminActivityHistory />
             )}
 
             {/* Settings Tab */}

@@ -275,7 +275,13 @@ export default function QuickActionsPanel({ recentActivity }: QuickActionsPanelP
     { id: '4', action: 'CREATE', entityType: 'import_batch', entityId: '', createdAt: new Date(Date.now() - 86400000).toISOString(), userName: 'Sistema', description: 'Se completó una importación masiva' },
   ]
 
-  const activityToShow = recentActivity && recentActivity.length > 0 ? recentActivity : defaultActivity
+  // Filter out login/logout activities for dashboard (show only tax-related)
+  const TAX_RELATED_ACTIONS = ['CREATE', 'UPDATE', 'DELETE', 'APPROVE', 'REJECT', 'SUBMIT', 'IMPORT', 'EXPORT']
+  const filteredActivity = recentActivity
+    ? recentActivity.filter(activity => TAX_RELATED_ACTIONS.includes(activity.action))
+    : []
+
+  const activityToShow = filteredActivity.length > 0 ? filteredActivity : defaultActivity
   const displayedActivity = showAllActivity ? activityToShow : activityToShow.slice(0, 4)
 
   return (
