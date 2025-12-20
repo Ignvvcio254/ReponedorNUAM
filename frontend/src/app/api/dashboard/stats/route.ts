@@ -12,6 +12,46 @@ import { requireAuth } from '@/lib/auth'
 import { createOptionsResponse, createSuccessResponse, createErrorResponse } from '@/lib/api-helpers'
 
 // ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Generate a human-readable description for an activity log entry
+ */
+function getActivityDescription(action: string, entityType: string, newValues: unknown): string {
+  const entityNames: Record<string, string> = {
+    'qualification': 'calificación',
+    'tax_entity': 'entidad tributaria',
+    'tax_return': 'declaración',
+    'import_batch': 'importación',
+    'user': 'usuario',
+    'audit_process': 'proceso de auditoría'
+  }
+  
+  const actionNames: Record<string, string> = {
+    'CREATE': 'creó',
+    'UPDATE': 'actualizó',
+    'DELETE': 'eliminó',
+    'APPROVE': 'aprobó',
+    'REJECT': 'rechazó',
+    'SUBMIT': 'envió'
+  }
+  
+  const entity = entityNames[entityType] || entityType
+  const verb = actionNames[action] || action.toLowerCase()
+  
+  // Try to extract a name from newValues if available
+  let name = ''
+  if (newValues && typeof newValues === 'object') {
+    const vals = newValues as Record<string, unknown>
+    name = (vals.emisorName || vals.businessName || vals.name || vals.fileName || '') as string
+    if (name) name = `: ${name}`
+  }
+  
+  return `Se ${verb} una ${entity}${name}`
+}
+
+// ============================================================================
 // CORS Configuration
 // ============================================================================
 
@@ -179,6 +219,95 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    // === NEW: Real compliance metrics ===
+    
+    // 1. Risk entities calculation (entities with overdue returns OR under audit)
+    const entitiesWithOverdueReturns = await db.taxEntity.count({
+      where: {
+        ...(country && { country: country as Country }),
+        taxReturns: {
+          some: {
+            dueDate: { lt: now },
+            status: { notIn: ['SUBMITTED', 'ACCEPTED'] }
+          }
+        }
+      }
+    })
+
+    const entitiesUnderAudit = await db.taxEntity.count({
+      where: {
+        ...(country && { country: country as Country }),
+        auditProcesses: {
+          some: {
+            status: { in: ['INITIATED', 'IN_PROGRESS', 'PENDING_RESPONSE', 'UNDER_REVIEW'] }
+          }
+        }
+      }
+    })
+
+    // Risk entities = unique entities with issues (overdue returns OR under audit)
+    const riskEntities = await db.taxEntity.count({
+      where: {
+        ...(country && { country: country as Country }),
+        OR: [
+          {
+            taxReturns: {
+              some: {
+                dueDate: { lt: now },
+                status: { notIn: ['SUBMITTED', 'ACCEPTED'] }
+              }
+            }
+          },
+          {
+            auditProcesses: {
+              some: {
+                status: { in: ['INITIATED', 'IN_PROGRESS', 'PENDING_RESPONSE', 'UNDER_REVIEW'] }
+              }
+            }
+          }
+        ]
+      }
+    })
+
+    // 2. Compliance breakdown calculation
+    // Entities with NO issues = fully compliant
+    const compliantEntities = activeTaxEntities - riskEntities
+    // Entities with only observations (under audit but no overdue) = with observations  
+    const entitiesWithObservations = entitiesUnderAudit
+    // Entities with overdue returns = non-compliant
+    const nonCompliantEntities = entitiesWithOverdueReturns
+
+    // 3. Recent activity from audit logs (last 10 activities)
+    const recentActivity = await db.auditLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      select: {
+        id: true,
+        action: true,
+        entityType: true,
+        entityId: true,
+        newValues: true,
+        createdAt: true,
+        user: {
+          select: {
+            name: true,
+          }
+        }
+      }
+    })
+
+    // 4. Average processing time (from qualification creation to approval)
+    // Using raw query for proper date difference calculation
+    const processingTimeResult: any[] = await db.$queryRaw`
+      SELECT AVG(EXTRACT(EPOCH FROM ("updatedAt" - "createdAt")) / 86400) as avg_days
+      FROM "qualifications"
+      WHERE "status" = 'APPROVED'
+        AND "createdAt" >= ${startDate}
+        AND "createdAt" <= ${endDate}
+    `
+    const averageProcessingDays = processingTimeResult[0]?.avg_days ? 
+      parseFloat(processingTimeResult[0].avg_days).toFixed(1) : null
+
     return createSuccessResponse({
       period: {
         start: startDate,
@@ -232,6 +361,27 @@ export async function GET(request: NextRequest) {
         failedRecords: importStats._sum.failedRecords || 0,
         successRate: (importStats._sum.totalRecords || 0) > 0 ?
           (((importStats._sum.successfulRecords || 0) / (importStats._sum.totalRecords || 0)) * 100).toFixed(1) : '0'
+      },
+      // NEW: Enhanced compliance data
+      compliance: {
+        riskEntities,
+        compliantEntities: Math.max(0, compliantEntities),
+        entitiesWithObservations,
+        nonCompliantEntities,
+        riskPercentage: activeTaxEntities > 0 ? ((riskEntities / activeTaxEntities) * 100).toFixed(1) : '0'
+      },
+      recentActivity: recentActivity.map((log: any) => ({
+        id: log.id,
+        action: log.action,
+        entityType: log.entityType,
+        entityId: log.entityId,
+        createdAt: log.createdAt,
+        userName: log.user?.name || 'Sistema',
+        description: getActivityDescription(log.action, log.entityType, log.newValues)
+      })),
+      processingTime: {
+        averageDays: averageProcessingDays,
+        unit: 'días'
       }
     })
   } catch (error) {

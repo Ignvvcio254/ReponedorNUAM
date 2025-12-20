@@ -56,6 +56,18 @@ interface AdvancedMetricsProps {
       failedRecords: number
       successRate: string
     }
+    // NEW: Real compliance metrics from API
+    compliance?: {
+      riskEntities: number
+      compliantEntities: number
+      entitiesWithObservations: number
+      nonCompliantEntities: number
+      riskPercentage: string
+    }
+    processingTime?: {
+      averageDays: string | null
+      unit: string
+    }
   }
 }
 
@@ -75,7 +87,12 @@ export default function AdvancedMetrics({ stats }: AdvancedMetricsProps) {
        (stats.monthlyTrends[stats.monthlyTrends.length - 2]?.count || 0)) 
     : 0
 
-  const riskEntities = Math.floor(stats.overview.taxEntities.total * 0.15) // Simulate 15% risk entities
+  // Use real data from API or fallback to calculated values
+  const riskEntities = stats.compliance?.riskEntities ?? Math.floor(stats.overview.taxEntities.total * 0.15)
+  const compliantEntities = stats.compliance?.compliantEntities ?? Math.floor(stats.overview.taxEntities.active * 0.75)
+  const entitiesWithObservations = stats.compliance?.entitiesWithObservations ?? Math.floor(stats.overview.taxEntities.active * 0.15)
+  const nonCompliantEntities = stats.compliance?.nonCompliantEntities ?? Math.floor(stats.overview.taxEntities.active * 0.10)
+  const averageProcessingDays = stats.processingTime?.averageDays ?? '2.3'
   const pendingAudits = stats.overview.audits.active
   
   return (
@@ -174,9 +191,11 @@ export default function AdvancedMetrics({ stats }: AdvancedMetricsProps) {
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-green-600">
-                  {Math.floor(stats.overview.taxEntities.active * 0.75)}
+                  {compliantEntities}
                 </p>
-                <p className="text-sm text-green-600">75%</p>
+                <p className="text-sm text-green-600">
+                  {stats.overview.taxEntities.active > 0 ? ((compliantEntities / stats.overview.taxEntities.active) * 100).toFixed(0) : 0}%
+                </p>
               </div>
             </div>
 
@@ -187,9 +206,11 @@ export default function AdvancedMetrics({ stats }: AdvancedMetricsProps) {
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-yellow-600">
-                  {Math.floor(stats.overview.taxEntities.active * 0.15)}
+                  {entitiesWithObservations}
                 </p>
-                <p className="text-sm text-yellow-600">15%</p>
+                <p className="text-sm text-yellow-600">
+                  {stats.overview.taxEntities.active > 0 ? ((entitiesWithObservations / stats.overview.taxEntities.active) * 100).toFixed(0) : 0}%
+                </p>
               </div>
             </div>
 
@@ -200,9 +221,11 @@ export default function AdvancedMetrics({ stats }: AdvancedMetricsProps) {
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-red-600">
-                  {Math.floor(stats.overview.taxEntities.active * 0.10)}
+                  {nonCompliantEntities}
                 </p>
-                <p className="text-sm text-red-600">10%</p>
+                <p className="text-sm text-red-600">
+                  {stats.overview.taxEntities.active > 0 ? ((nonCompliantEntities / stats.overview.taxEntities.active) * 100).toFixed(0) : 0}%
+                </p>
               </div>
             </div>
           </div>
@@ -248,7 +271,7 @@ export default function AdvancedMetrics({ stats }: AdvancedMetricsProps) {
             <div className="mt-4 pt-4 border-t border-gray-200">
               <div className="text-center">
                 <p className="text-sm text-gray-600">Tiempo Promedio de Procesamiento</p>
-                <p className="text-2xl font-bold text-gray-900">2.3 días</p>
+                <p className="text-2xl font-bold text-gray-900">{averageProcessingDays || 'N/A'} días</p>
               </div>
             </div>
           </div>

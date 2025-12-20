@@ -5,7 +5,50 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import Link from 'next/link'
 
-export default function QuickActionsPanel() {
+interface RecentActivityItem {
+  id: string
+  action: string
+  entityType: string
+  entityId: string
+  createdAt: string
+  userName: string
+  description: string
+}
+
+interface QuickActionsPanelProps {
+  recentActivity?: RecentActivityItem[]
+}
+
+// Helper function to get relative time
+function getRelativeTime(dateString: string): string {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+  
+  if (diffMins < 1) return 'ahora'
+  if (diffMins < 60) return `hace ${diffMins}m`
+  if (diffHours < 24) return `hace ${diffHours}h`
+  if (diffDays < 7) return `hace ${diffDays}d`
+  return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
+}
+
+// Helper function to get activity color based on action type
+function getActivityColor(action: string): string {
+  switch (action) {
+    case 'CREATE': return 'bg-green-400'
+    case 'APPROVE': return 'bg-green-500'
+    case 'UPDATE': return 'bg-blue-400'
+    case 'DELETE': return 'bg-red-400'
+    case 'REJECT': return 'bg-orange-400'
+    case 'SUBMIT': return 'bg-purple-400'
+    default: return 'bg-gray-400'
+  }
+}
+
+export default function QuickActionsPanel({ recentActivity }: QuickActionsPanelProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   const quickActions = [
@@ -59,6 +102,15 @@ export default function QuickActionsPanel() {
     }
   ]
 
+  // Default placeholder activity for when no real data is available
+  const defaultActivity: RecentActivityItem[] = [
+    { id: '1', action: 'CREATE', entityType: 'qualification', entityId: '', createdAt: new Date(Date.now() - 7200000).toISOString(), userName: 'Sistema', description: 'Se creó una calificación' },
+    { id: '2', action: 'UPDATE', entityType: 'tax_entity', entityId: '', createdAt: new Date(Date.now() - 14400000).toISOString(), userName: 'Sistema', description: 'Se actualizó una entidad' },
+    { id: '3', action: 'CREATE', entityType: 'import_batch', entityId: '', createdAt: new Date(Date.now() - 86400000).toISOString(), userName: 'Sistema', description: 'Se completó una importación' },
+  ]
+
+  const activityToShow = recentActivity && recentActivity.length > 0 ? recentActivity.slice(0, 5) : defaultActivity
+
   return (
     <Card className="p-6">
       <div className="flex items-center justify-between mb-4">
@@ -97,27 +149,22 @@ export default function QuickActionsPanel() {
         ))}
       </div>
 
-      {/* Recent Activity Section */}
+      {/* Recent Activity Section - Now with real data */}
       <div className="mt-6 pt-6 border-t border-gray-200">
         <h4 className="text-sm font-medium text-gray-900 mb-3">
           Actividad Reciente
         </h4>
         <div className="space-y-2">
-          <div className="flex items-center text-sm text-gray-600">
-            <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
-            <span>Calificación aprobada para Minera Los Andes</span>
-            <span className="ml-auto text-xs text-gray-400">hace 2h</span>
-          </div>
-          <div className="flex items-center text-sm text-gray-600">
-            <div className="w-2 h-2 bg-blue-400 rounded-full mr-2"></div>
-            <span>Nueva entidad registrada: ConsulMex</span>
-            <span className="ml-auto text-xs text-gray-400">hace 4h</span>
-          </div>
-          <div className="flex items-center text-sm text-gray-600">
-            <div className="w-2 h-2 bg-purple-400 rounded-full mr-2"></div>
-            <span>Importación completada: 2,487 registros</span>
-            <span className="ml-auto text-xs text-gray-400">hace 1d</span>
-          </div>
+          {activityToShow.map((activity) => (
+            <div key={activity.id} className="flex items-center text-sm text-gray-600">
+              <div className={`w-2 h-2 ${getActivityColor(activity.action)} rounded-full mr-2`}></div>
+              <span className="truncate flex-1">{activity.description}</span>
+              <span className="ml-auto text-xs text-gray-400 shrink-0">{getRelativeTime(activity.createdAt)}</span>
+            </div>
+          ))}
+          {(!recentActivity || recentActivity.length === 0) && (
+            <p className="text-xs text-gray-400 italic">Cargando actividad real del sistema...</p>
+          )}
         </div>
       </div>
     </Card>

@@ -59,6 +59,27 @@ interface DashboardStats {
     failedRecords: number
     successRate: string
   }
+  // NEW: Real compliance metrics
+  compliance?: {
+    riskEntities: number
+    compliantEntities: number
+    entitiesWithObservations: number
+    nonCompliantEntities: number
+    riskPercentage: string
+  }
+  recentActivity?: Array<{
+    id: string
+    action: string
+    entityType: string
+    entityId: string
+    createdAt: string
+    userName: string
+    description: string
+  }>
+  processingTime?: {
+    averageDays: string | null
+    unit: string
+  }
 }
 
 interface TaxContainerDashboardProps {
@@ -168,7 +189,7 @@ export default function TaxContainerDashboard({ userId }: TaxContainerDashboardP
       </div>
 
       {/* Quick Actions Panel */}
-      <QuickActionsPanel />
+      <QuickActionsPanel recentActivity={stats.recentActivity} />
 
       {/* Métricas principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
