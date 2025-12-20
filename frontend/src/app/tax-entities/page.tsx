@@ -197,6 +197,7 @@ export default function TaxEntitiesPage() {
             onSubmit={handleSubmit}
             onCancel={handleBack}
             isLoading={isSubmitting}
+            initialData={editingEntity}
           />
         </div>
       </div>

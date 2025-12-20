@@ -250,6 +250,7 @@ export default function QualificationsPage() {
             onSubmit={handleSubmit}
             onCancel={handleBack}
             isLoading={isSubmitting}
+            initialData={editingQualification}
           />
         </div>
       </div>
