@@ -47,7 +47,7 @@ export function Header() {
         <div className="flex justify-between items-center h-14 sm:h-16">
           {/* Logo - solo logo, sin texto */}
           <Link href="/dashboard" className="flex-shrink-0 flex items-center">
-            <Logo size="lg" showText={false} />
+            <Logo size="header" showText={false} />
           </Link>
 
           {/* Navigation Desktop */}
