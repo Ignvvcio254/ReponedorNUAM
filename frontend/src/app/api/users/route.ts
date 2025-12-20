@@ -36,6 +36,9 @@ export async function GET(request: NextRequest) {
       ]
     }
     
+    // Get current time for session expiration check
+    const now = new Date()
+    
     const users = await db.user.findMany({
       where: whereClause,
       select: {
@@ -55,6 +58,16 @@ export async function GET(request: NextRequest) {
             importBatches: true,
             auditLogs: true
           }
+        },
+        // Include sessions to check if user is online
+        sessions: {
+          where: {
+            expires: { gt: now }  // Only non-expired sessions
+          },
+          select: {
+            id: true,
+            expires: true
+          }
         }
       },
       orderBy: {
@@ -62,7 +75,14 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return createSuccessResponse(users)
+    // Transform users to include isOnline field
+    const usersWithOnlineStatus = users.map(user => ({
+      ...user,
+      isOnline: user.sessions.length > 0,  // Online if has at least one active session
+      sessions: undefined  // Remove sessions from response to keep it clean
+    }))
+
+    return createSuccessResponse(usersWithOnlineStatus)
   } catch (error) {
     console.error('Error fetching users:', error)
     const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor'

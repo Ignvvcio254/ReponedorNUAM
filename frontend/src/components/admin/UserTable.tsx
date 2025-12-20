@@ -20,6 +20,7 @@ export interface User {
   email: string
   role: string
   isActive: boolean
+  isOnline?: boolean  // True if user has active session
   lastLoginAt: string | null
   createdAt: string
   _count?: {
@@ -94,6 +95,9 @@ export function UserTable({
               Usuario
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Sesión
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Rol
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -140,6 +144,30 @@ export function UserTable({
                       </div>
                       <div className="text-sm text-gray-500">{user.email}</div>
                     </div>
+                  </div>
+                </td>
+
+                {/* Online/Offline Status */}
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <div className={`w-3 h-3 rounded-full ${
+                        user.isOnline 
+                          ? 'bg-green-500' 
+                          : 'bg-gray-300'
+                      }`}>
+                        {user.isOnline && (
+                          <div className="absolute inset-0 w-3 h-3 rounded-full bg-green-500 animate-ping opacity-75" />
+                        )}
+                      </div>
+                    </div>
+                    <span className={`text-xs font-medium ${
+                      user.isOnline 
+                        ? 'text-green-700' 
+                        : 'text-gray-500'
+                    }`}>
+                      {user.isOnline ? 'Online' : 'Offline'}
+                    </span>
                   </div>
                 </td>
 
