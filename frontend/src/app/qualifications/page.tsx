@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import QualificationsList from '@/components/tax-container/QualificationsList'
 import QualificationFormNew from '@/components/tax-container/QualificationFormNew'
-import QualificationDetailModal from '@/components/tax-container/QualificationDetailModal'
+import QualificationDetailView from '@/components/tax-container/QualificationDetailView'
+import ConfirmationModal from '@/components/ui/ConfirmationModal'
 import { useToast } from '@/components/ui/ToastContainer'
 
 interface Qualification {
@@ -30,18 +31,34 @@ interface Qualification {
   }
 }
 
+type ViewMode = 'list' | 'detail' | 'form'
+
 export default function QualificationsPage() {
   const toast = useToast()
   const [qualifications, setQualifications] = useState<Qualification[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [selectedQualification, setSelectedQualification] = useState<Qualification | null>(null)
   const [editingQualification, setEditingQualification] = useState<Qualification | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  
-  // Modal state
-  const [selectedQualification, setSelectedQualification] = useState<Qualification | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean
+    title: string
+    message: string
+    type: 'danger' | 'warning' | 'success' | 'info'
+    onConfirm: () => void
+    confirmText?: string
+    requireExtra?: boolean
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'danger',
+    onConfirm: () => {},
+  })
 
   useEffect(() => {
     fetchQualifications()
@@ -67,74 +84,90 @@ export default function QualificationsPage() {
 
   const handleAddNew = () => {
     setEditingQualification(null)
-    setShowForm(true)
+    setViewMode('form')
   }
 
   const handleEdit = (qualification: Qualification) => {
-    setIsModalOpen(false)
     setEditingQualification(qualification)
-    setShowForm(true)
+    setViewMode('form')
   }
 
   const handleView = (qualification: Qualification) => {
     setSelectedQualification(qualification)
-    setIsModalOpen(true)
+    setViewMode('detail')
   }
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false)
+  const handleBack = () => {
+    setViewMode('list')
     setSelectedQualification(null)
+    setEditingQualification(null)
   }
 
-  const handleDelete = async (qualification: Qualification) => {
-    if (window.confirm(`¿Estás seguro de que quieres eliminar la calificación de "${qualification.emisorName}"?`)) {
-      try {
-        const response = await fetch(`/api/qualifications/${qualification.id}`, {
-          method: 'DELETE'
-        })
-        const data = await response.json()
-        
-        if (data.success) {
-          toast.success('Calificación eliminada exitosamente')
-          await fetchQualifications()
-        } else {
-          toast.error('Error al eliminar la calificación: ' + data.error)
+  const handleDelete = (qualification: Qualification) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Eliminar Calificación',
+      message: `¿Estás seguro de que deseas eliminar la calificación de "${qualification.emisorName}"? Esta acción no se puede deshacer.`,
+      type: 'danger',
+      confirmText: 'Eliminar',
+      requireExtra: true,
+      onConfirm: async () => {
+        try {
+          setIsProcessing(true)
+          const response = await fetch(`/api/qualifications/${qualification.id}`, {
+            method: 'DELETE'
+          })
+          const data = await response.json()
+          
+          if (data.success) {
+            toast.success('✅ Calificación eliminada exitosamente')
+            await fetchQualifications()
+          } else {
+            toast.error('Error al eliminar: ' + data.error)
+          }
+        } catch (error) {
+          toast.error('Error al eliminar la calificación')
+        } finally {
+          setIsProcessing(false)
+          setConfirmModal(prev => ({ ...prev, isOpen: false }))
         }
-      } catch (error) {
-        console.error('Error deleting qualification:', error)
-        toast.error('Error al eliminar la calificación')
       }
-    }
+    })
   }
 
   const handleApprove = async (qualification: Qualification) => {
-    try {
-      setIsProcessing(true)
-      const response = await fetch(`/api/qualifications/${qualification.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          status: 'APPROVED'
-        })
-      })
-      const data = await response.json()
-      
-      if (data.success) {
-        toast.success('✅ Calificación aprobada exitosamente')
-        setIsModalOpen(false)
-        setSelectedQualification(null)
-        await fetchQualifications()
-      } else {
-        toast.error('Error al aprobar la calificación: ' + data.error)
+    setConfirmModal({
+      isOpen: true,
+      title: 'Aprobar Calificación',
+      message: `¿Confirmas la aprobación de la calificación de "${qualification.emisorName}"?`,
+      type: 'success',
+      confirmText: 'Aprobar',
+      onConfirm: async () => {
+        try {
+          setIsProcessing(true)
+          const response = await fetch(`/api/qualifications/${qualification.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'APPROVED' })
+          })
+          const data = await response.json()
+          
+          if (data.success) {
+            toast.success('✅ Calificación aprobada exitosamente')
+            setViewMode('list')
+            setSelectedQualification(null)
+            await fetchQualifications()
+          } else {
+            toast.error('Error al aprobar: ' + data.error)
+          }
+        } catch (error) {
+          toast.error('Error al aprobar la calificación')
+        } finally {
+          setIsProcessing(false)
+          setConfirmModal(prev => ({ ...prev, isOpen: false }))
+        }
       }
-    } catch (error) {
-      console.error('Error approving qualification:', error)
-      toast.error('Error al aprobar la calificación')
-    } finally {
-      setIsProcessing(false)
-    }
+    })
   }
 
   const handleReject = async (qualification: Qualification, reason: string) => {
@@ -142,54 +175,42 @@ export default function QualificationsPage() {
       setIsProcessing(true)
       const response = await fetch(`/api/qualifications/${qualification.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          status: 'REJECTED',
-          rejectionReason: reason
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'REJECTED', rejectionReason: reason })
       })
       const data = await response.json()
       
       if (data.success) {
         toast.success('❌ Calificación rechazada')
-        setIsModalOpen(false)
+        setViewMode('list')
         setSelectedQualification(null)
         await fetchQualifications()
       } else {
-        toast.error('Error al rechazar la calificación: ' + data.error)
+        toast.error('Error al rechazar: ' + data.error)
       }
     } catch (error) {
-      console.error('Error rejecting qualification:', error)
       toast.error('Error al rechazar la calificación')
     } finally {
       setIsProcessing(false)
     }
   }
 
-  // Legacy handlers for list buttons (still work from the list)
-  const handleApproveFromList = async (qualification: Qualification) => {
-    if (window.confirm(`¿Aprobar la calificación de "${qualification.emisorName}"?`)) {
-      await handleApprove(qualification)
-    }
+  // Handlers for list actions (with confirmation)
+  const handleApproveFromList = (qualification: Qualification) => {
+    handleApprove(qualification)
   }
 
-  const handleRejectFromList = async (qualification: Qualification) => {
-    const reason = window.prompt('Motivo del rechazo:')
-    if (reason) {
-      await handleReject(qualification, reason)
-    }
+  const handleRejectFromList = (qualification: Qualification) => {
+    // Open detail view to show reject form
+    setSelectedQualification(qualification)
+    setViewMode('detail')
   }
 
   const handleSubmit = async (formData: any) => {
     try {
       setIsSubmitting(true)
       
-      const submitData = {
-        ...formData,
-        userId: 'admin-setup-001'
-      }
+      const submitData = { ...formData }
       
       const url = editingQualification 
         ? `/api/qualifications/${editingQualification.id}`
@@ -199,70 +220,96 @@ export default function QualificationsPage() {
       
       const response = await fetch(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(submitData)
       })
       
       const data = await response.json()
       
       if (data.success) {
-        toast.success(editingQualification ? 'Calificación actualizada exitosamente' : 'Calificación creada exitosamente')
-        setShowForm(false)
+        toast.success(editingQualification ? '✅ Calificación actualizada' : '✅ Calificación creada')
+        setViewMode('list')
         setEditingQualification(null)
         await fetchQualifications()
       } else {
-        toast.error('Error al guardar la calificación: ' + data.error)
+        toast.error('Error: ' + data.error)
       }
     } catch (error) {
-      console.error('Error submitting form:', error)
       toast.error('Error al guardar la calificación')
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const handleCancel = () => {
-    setShowForm(false)
-    setEditingQualification(null)
-  }
-
-  if (showForm) {
+  // Render based on view mode
+  if (viewMode === 'form') {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <QualificationFormNew
-          onSubmit={handleSubmit}
-          onCancel={handleCancel}
-          isLoading={isSubmitting}
-        />
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <QualificationFormNew
+            onSubmit={handleSubmit}
+            onCancel={handleBack}
+            isLoading={isSubmitting}
+          />
+        </div>
       </div>
     )
   }
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <QualificationsList
-        qualifications={qualifications}
-        onAddNew={handleAddNew}
-        onView={handleView}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onApprove={handleApproveFromList}
-        onReject={handleRejectFromList}
-        isLoading={isLoading}
-      />
+  if (viewMode === 'detail' && selectedQualification) {
+    return (
+      <>
+        <QualificationDetailView
+          qualification={selectedQualification}
+          onBack={handleBack}
+          onApprove={() => handleApprove(selectedQualification)}
+          onReject={(reason) => handleReject(selectedQualification, reason)}
+          onEdit={() => handleEdit(selectedQualification)}
+          isProcessing={isProcessing}
+        />
+        
+        <ConfirmationModal
+          isOpen={confirmModal.isOpen}
+          onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+          onConfirm={confirmModal.onConfirm}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          type={confirmModal.type}
+          confirmText={confirmModal.confirmText}
+          isLoading={isProcessing}
+        />
+      </>
+    )
+  }
 
-      {/* Detail Modal */}
-      <QualificationDetailModal
-        qualification={selectedQualification}
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onApprove={handleApprove}
-        onReject={handleReject}
-        onEdit={handleEdit}
-        isProcessing={isProcessing}
+  return (
+    <>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <QualificationsList
+            qualifications={qualifications}
+            onAddNew={handleAddNew}
+            onView={handleView}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onApprove={handleApproveFromList}
+            onReject={handleRejectFromList}
+            isLoading={isLoading}
+          />
+        </div>
+      </div>
+
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText={confirmModal.confirmText}
+        requireExtraConfirmation={confirmModal.requireExtra}
+        isLoading={isProcessing}
       />
-    </div>
+    </>
   )
 }
