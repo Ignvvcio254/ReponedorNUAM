@@ -168,8 +168,12 @@ export default function AdminActivityHistory({ initialLogs = [] }: AdminActivity
       const response = await fetch(`/api/audit-logs?${params}`)
       const result = await response.json()
       
-      if (result.success && result.data?.data) {
-        setLogs(result.data.data)
+      console.log('Audit logs response:', result) // Debug log
+      
+      if (result.success) {
+        // The API returns { success: true, data: { data: logs[], pagination: {...} } }
+        const logsData = result.data?.data || result.data || []
+        setLogs(Array.isArray(logsData) ? logsData : [])
       }
     } catch (error) {
       console.error('Error fetching logs:', error)
