@@ -1,14 +1,14 @@
 'use client'
 
 /**
- * Login Page - Premium Modern Design
+ * Login Page - Polished Light Theme
  *
  * Features:
- * - Animated gradient background
- * - Glassmorphism card
- * - Modern input styling
+ * - Clean white design with subtle gradients
+ * - Polished input styling
  * - Password visibility toggle
- * - Animated elements
+ * - Smooth animations
+ * - Professional aesthetic
  */
 
 import { useState, useEffect, Suspense } from 'react'
@@ -63,7 +63,7 @@ function LoginForm() {
     const newErrors: FormErrors = {}
 
     if (!formData.email) {
-      newErrors.email = 'El correo es requerido'
+      newErrors.email = 'El correo electrónico es requerido'
     } else if (!isValidEmail(formData.email)) {
       newErrors.email = 'Formato de correo inválido'
     }
@@ -105,7 +105,7 @@ function LoginForm() {
         router.refresh()
       }
     } catch (error) {
-      setErrors({ general: 'Error inesperado. Intenta de nuevo.' })
+      setErrors({ general: 'Error inesperado. Por favor, intenta de nuevo.' })
       setIsLoading(false)
     }
   }
@@ -132,65 +132,53 @@ function LoginForm() {
   // ============================================================================
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4">
-      {/* Animated Background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
-        {/* Floating orbs */}
-        <div className="absolute top-1/4 -left-20 w-96 h-96 bg-blue-500/30 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-purple-500/30 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-500/20 rounded-full blur-3xl" />
-        
-        {/* Grid pattern overlay */}
-        <div className="absolute inset-0 opacity-10" style={{ 
-          backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
-          backgroundSize: '50px 50px'
-        }} />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+      {/* Decorative elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-100 to-indigo-200 rounded-full opacity-60 blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-indigo-100 to-purple-200 rounded-full opacity-60 blur-3xl" />
       </div>
 
-      {/* Content */}
-      <div className={`relative z-10 w-full max-w-md transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+      <div className={`relative z-10 max-w-md w-full transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
-            <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-lg border border-white/20 shadow-2xl">
-              <Logo size="xl" showText={false} />
+            <div className="p-4 rounded-2xl bg-white shadow-xl shadow-blue-500/10 border border-gray-100">
+              <Logo size="xl" showText={true} />
             </div>
           </div>
-          <h1 className="text-4xl font-bold text-white mb-2">
-            Bienvenido
+          <h1 className="text-3xl font-bold text-gray-900">
+            Bienvenido a NUAM
           </h1>
-          <p className="text-blue-200/80">
-            Sistema de Contenedor Tributario NUAM
+          <p className="mt-2 text-gray-600">
+            Sistema de Contenedor Tributario Latinoamericano
           </p>
         </div>
 
         {/* Login Card */}
-        <div className="relative backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl shadow-2xl p-8">
-          {/* Decorative gradient */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 rounded-t-3xl" />
-          
+        <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100 p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* General Error */}
             {errors.general && (
-              <div className="flex items-start gap-3 bg-red-500/20 border border-red-400/30 backdrop-blur-sm text-red-200 px-4 py-3 rounded-xl text-sm">
-                <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-start gap-3 bg-red-50 border border-red-100 text-red-800 px-4 py-3 rounded-xl text-sm">
+                <svg className="w-5 h-5 flex-shrink-0 mt-0.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 <div>
-                  <p className="font-medium">Error de autenticación</p>
-                  <p className="text-red-300/80 text-xs mt-0.5">{errors.general}</p>
+                  <p className="font-semibold">Error de autenticación</p>
+                  <p className="text-red-600 text-xs mt-0.5">{errors.general}</p>
                 </div>
               </div>
             )}
 
             {/* Email Field */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-blue-100 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                 Correo electrónico
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <EnvelopeIcon className="h-5 w-5 text-blue-300/60" />
+                  <EnvelopeIcon className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
                   id="email"
@@ -201,19 +189,21 @@ function LoginForm() {
                   onChange={handleInputChange}
                   disabled={isLoading}
                   className={`
-                    w-full pl-12 pr-4 py-3.5 rounded-xl
-                    bg-white/5 border backdrop-blur-sm
-                    text-white placeholder-blue-200/40
-                    focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-400/50
+                    w-full pl-12 pr-4 py-3 rounded-xl
+                    border bg-gray-50
+                    text-gray-900 placeholder-gray-400
+                    focus:outline-none focus:ring-2 focus:bg-white
                     disabled:opacity-50 disabled:cursor-not-allowed
                     transition-all duration-200
-                    ${errors.email ? 'border-red-400/50 focus:ring-red-400/50' : 'border-white/10 hover:border-white/20'}
+                    ${errors.email 
+                      ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' 
+                      : 'border-gray-200 focus:ring-blue-500/20 focus:border-blue-500 hover:border-gray-300'}
                   `}
                   placeholder="usuario@ejemplo.com"
                 />
               </div>
               {errors.email && (
-                <p className="mt-2 text-sm text-red-300 flex items-center gap-1">
+                <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -224,12 +214,12 @@ function LoginForm() {
 
             {/* Password Field */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-blue-100 mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 Contraseña
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <LockClosedIcon className="h-5 w-5 text-blue-300/60" />
+                  <LockClosedIcon className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
                   id="password"
@@ -240,20 +230,22 @@ function LoginForm() {
                   onChange={handleInputChange}
                   disabled={isLoading}
                   className={`
-                    w-full pl-12 pr-12 py-3.5 rounded-xl
-                    bg-white/5 border backdrop-blur-sm
-                    text-white placeholder-blue-200/40
-                    focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-400/50
+                    w-full pl-12 pr-12 py-3 rounded-xl
+                    border bg-gray-50
+                    text-gray-900 placeholder-gray-400
+                    focus:outline-none focus:ring-2 focus:bg-white
                     disabled:opacity-50 disabled:cursor-not-allowed
                     transition-all duration-200
-                    ${errors.password ? 'border-red-400/50 focus:ring-red-400/50' : 'border-white/10 hover:border-white/20'}
+                    ${errors.password 
+                      ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' 
+                      : 'border-gray-200 focus:ring-blue-500/20 focus:border-blue-500 hover:border-gray-300'}
                   `}
                   placeholder="••••••••"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-blue-300/60 hover:text-blue-200 transition-colors"
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
                 >
                   {showPassword ? (
                     <EyeSlashIcon className="h-5 w-5" />
@@ -263,7 +255,7 @@ function LoginForm() {
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-2 text-sm text-red-300 flex items-center gap-1">
+                <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -274,15 +266,15 @@ function LoginForm() {
 
             {/* Remember Me & Forgot Password */}
             <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-2 cursor-pointer group">
                 <input
                   type="checkbox"
-                  className="w-4 h-4 rounded border-white/20 bg-white/5 text-blue-500 focus:ring-blue-400/50 focus:ring-offset-0"
+                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-offset-0"
                   disabled={isLoading}
                 />
-                <span className="text-sm text-blue-200/80">Recordarme</span>
+                <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors">Recordarme</span>
               </label>
-              <a href="#" className="text-sm font-medium text-blue-300 hover:text-blue-200 transition-colors">
+              <a href="#" className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors">
                 ¿Olvidaste tu contraseña?
               </a>
             </div>
@@ -292,12 +284,12 @@ function LoginForm() {
               type="submit"
               disabled={isLoading}
               className={`
-                w-full flex justify-center items-center gap-2 py-4 px-6 rounded-xl
+                w-full flex justify-center items-center gap-2 py-3.5 px-6 rounded-xl
                 font-semibold text-white
                 transition-all duration-300
                 ${isLoading
-                  ? 'bg-blue-500/50 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-lg hover:shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.98]'
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'
                 }
               `}
             >
@@ -319,32 +311,35 @@ function LoginForm() {
           </form>
 
           {/* Demo Credentials */}
-          <div className="mt-8 pt-6 border-t border-white/10">
-            <p className="text-xs text-blue-200/60 text-center mb-3 flex items-center justify-center gap-1">
+          <div className="mt-8 pt-6 border-t border-gray-100">
+            <p className="text-xs text-gray-500 text-center mb-3 flex items-center justify-center gap-1.5">
               <ShieldCheckIcon className="w-4 h-4" />
-              Acceso rápido de demostración
+              Credenciales de demostración
             </p>
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => fillDemoCredentials('admin')}
-                className="py-2 px-3 rounded-lg bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-400/30 text-purple-200 text-xs font-medium hover:from-purple-500/30 hover:to-purple-600/30 transition-all"
+                className="group py-2.5 px-3 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 text-purple-700 text-xs font-medium hover:from-purple-100 hover:to-purple-150 hover:border-purple-300 hover:shadow-md transition-all"
               >
-                👑 Admin
+                <span className="block text-base mb-0.5">👑</span>
+                Admin
               </button>
               <button
                 type="button"
                 onClick={() => fillDemoCredentials('accountant')}
-                className="py-2 px-3 rounded-lg bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-400/30 text-green-200 text-xs font-medium hover:from-green-500/30 hover:to-green-600/30 transition-all"
+                className="group py-2.5 px-3 rounded-xl bg-gradient-to-br from-green-50 to-green-100 border border-green-200 text-green-700 text-xs font-medium hover:from-green-100 hover:to-green-150 hover:border-green-300 hover:shadow-md transition-all"
               >
-                📊 Contador
+                <span className="block text-base mb-0.5">📊</span>
+                Contador
               </button>
               <button
                 type="button"
                 onClick={() => fillDemoCredentials('auditor')}
-                className="py-2 px-3 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-400/30 text-blue-200 text-xs font-medium hover:from-blue-500/30 hover:to-blue-600/30 transition-all"
+                className="group py-2.5 px-3 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 text-blue-700 text-xs font-medium hover:from-blue-100 hover:to-blue-150 hover:border-blue-300 hover:shadow-md transition-all"
               >
-                🔍 Auditor
+                <span className="block text-base mb-0.5">🔍</span>
+                Auditor
               </button>
             </div>
           </div>
@@ -352,12 +347,12 @@ function LoginForm() {
 
         {/* Footer */}
         <div className="mt-8 text-center">
-          <p className="text-sm text-blue-200/50">
+          <p className="text-sm text-gray-500">
             NUAM Tax Container System v1.0.0
           </p>
-          <p className="text-xs text-blue-200/30 mt-1 flex items-center justify-center gap-1">
+          <p className="text-xs text-gray-400 mt-1 flex items-center justify-center gap-1">
             <LockClosedIcon className="w-3 h-3" />
-            Conexión segura SSL/TLS
+            Conexión Segura SSL/TLS
           </p>
         </div>
       </div>
@@ -371,13 +366,13 @@ function LoginForm() {
 
 function LoadingFallback() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
       <div className="text-center">
         <div className="w-16 h-16 mx-auto mb-4 relative">
-          <div className="absolute inset-0 rounded-full border-4 border-blue-500/30" />
-          <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-400 animate-spin" />
+          <div className="absolute inset-0 rounded-full border-4 border-blue-100" />
+          <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 animate-spin" />
         </div>
-        <p className="text-blue-200/60">Cargando...</p>
+        <p className="text-gray-500">Cargando...</p>
       </div>
     </div>
   )
