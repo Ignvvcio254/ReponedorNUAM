@@ -29,6 +29,12 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
 
+  // Hide header on public pages (login, register, etc.)
+  const publicRoutes = ['/login', '/register', '/forgot-password']
+  if (publicRoutes.some(route => pathname?.startsWith(route))) {
+    return null
+  }
+
   const navigation = getNavigation(session?.user.role)
 
   const handleLogout = async () => {

@@ -101,8 +101,8 @@ function LoginForm() {
       }
 
       if (result?.ok) {
-        router.push(callbackUrl)
-        router.refresh()
+        // Use hard navigation to ensure full page reload and header update
+        window.location.href = callbackUrl
       }
     } catch (error) {
       setErrors({ general: 'Error inesperado. Por favor, intenta de nuevo.' })
